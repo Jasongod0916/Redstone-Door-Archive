@@ -1,0 +1,678 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Door Admin</title>
+  <style>
+    :root{--bg:#08111d;--bg2:#0d1b30;--panel:rgba(10,18,30,.92);--line:rgba(145,171,213,.16);--text:#edf4ff;--muted:#98acc8;--mint:#8fe0c9;--gold:#ffc466}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%}
+    body{font-family:"Segoe UI Variable Display","Bahnschrift",sans-serif;color:var(--text);background:radial-gradient(circle at 8% 0,rgba(92,135,255,.15),transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg));padding:24px}
+    h1,h2,h3,p{margin:0}button,input,textarea,select{font:inherit}
+    .shell{width:min(1520px,100%);margin:0 auto;display:grid;gap:18px}
+    .hero,.panel,.editor,.list-card{border:1px solid var(--line);background:linear-gradient(180deg,rgba(14,24,41,.96),rgba(8,13,22,.98));box-shadow:0 28px 80px rgba(0,0,0,.34)}
+    .hero{border-radius:28px;padding:24px;display:flex;justify-content:space-between;gap:20px;align-items:end}
+    .hero-copy{display:grid;gap:10px}
+    .eyebrow{display:inline-flex;width:fit-content;padding:8px 12px;border-radius:999px;background:rgba(143,224,201,.12);color:var(--mint);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+    .hero h1{font-size:clamp(34px,6vw,60px);line-height:.96;letter-spacing:-.04em}
+    .hero p{max-width:760px;line-height:1.65;color:var(--muted)}
+    .hero-actions{display:flex;flex-wrap:wrap;gap:10px}
+    .btn,.ghost{border:1px solid var(--line);border-radius:16px;padding:12px 16px;background:rgba(255,255,255,.04);color:var(--text);text-decoration:none;cursor:pointer}
+    .btn{background:linear-gradient(180deg,rgba(255,196,102,.18),rgba(255,196,102,.08));color:#fff3dc;font-weight:700}
+    .layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px}
+    .panel{border-radius:24px;padding:18px;display:grid;gap:16px;align-content:start}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px}
+    .search{width:100%;padding:13px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text)}
+    .entry-list{display:grid;gap:10px;max-height:calc(100vh - 280px);overflow:auto;padding-right:4px}
+    .list-card{border-radius:18px;padding:14px;display:grid;gap:8px;cursor:pointer;transition:.18s ease;border-color:rgba(255,255,255,.06)}
+    .list-card:hover,.list-card.active{transform:translateY(-1px);border-color:rgba(255,196,102,.24);background:linear-gradient(180deg,rgba(255,196,102,.08),rgba(255,255,255,.03))}
+    .list-top{display:flex;justify-content:space-between;gap:12px;align-items:start}
+    .pill{display:inline-flex;width:fit-content;padding:6px 10px;border-radius:999px;background:rgba(143,224,201,.12);color:var(--mint);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+    .small{font-size:13px;color:var(--muted)}
+    .editor{border-radius:28px;padding:22px;display:grid;gap:18px}
+    .editor-head{display:flex;justify-content:space-between;gap:12px;align-items:end}.editor-head p{color:var(--muted);line-height:1.55}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field,.field-full{display:grid;gap:8px}.field-full{grid-column:1 / -1}
+    label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    input,textarea,select{width:100%;padding:13px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.035);color:var(--text)}
+    textarea{min-height:110px;resize:vertical}
+    .field-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .files-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .section{display:grid;gap:12px;padding:16px;border-radius:22px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.025)}
+    .section-title{display:flex;justify-content:space-between;gap:10px;align-items:center}.section-title strong{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:#dce8ff}
+    .actions{display:flex;flex-wrap:wrap;gap:10px}
+    .file-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+    .upload-btn{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;white-space:nowrap}
+    .upload-btn:hover{border-color:rgba(143,224,201,.28);background:rgba(255,255,255,.07)}
+    .note{padding:12px 14px;border-radius:16px;border:1px solid rgba(143,224,201,.18);background:rgba(143,224,201,.07);color:#dffaf1;line-height:1.5}
+    .warn{border-color:rgba(255,196,102,.24);background:rgba(255,196,102,.08);color:#ffecc8}
+    .json-box{padding:14px 16px;border-radius:18px;border:1px solid rgba(255,255,255,.06);background:rgba(5,10,18,.6);color:#cfe0ff;font:13px/1.6 "Cascadia Code","Consolas",monospace;white-space:pre-wrap;word-break:break-word}
+    .progress{display:grid;gap:8px}
+    .progress[hidden]{display:none}
+    .progress-track{height:10px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04)}
+    .progress-fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,rgba(143,224,201,.92),rgba(255,196,102,.92));transition:width .28s ease}
+    .progress-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .progress-label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .progress-percent{font-size:12px;font-weight:700;color:#eef5ff}
+
+    @media (max-width:1100px){.layout{grid-template-columns:1fr}.entry-list{max-height:none}}
+    @media (max-width:760px){body{padding:14px}.hero,.panel,.editor{border-radius:22px}.grid,.field-group,.files-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Local Admin</span>
+        <h1>Door Data Form</h1>
+        <p>This page reads the current <code>doors.json</code> first. You edit a draft here, then press one final button to overwrite the old JSON with the full updated dataset.</p>
+      </div>
+      <div class="hero-actions">
+        <a class="ghost" href="/door-catalog-viewer.html">Open Catalog</a>
+        <button id="reload-json" class="ghost" type="button">Reload JSON</button>
+        <button id="save-all" class="btn" type="button">Save All Changes</button>
+      </div>
+    </section>
+
+    <div class="layout">
+      <aside class="panel">
+        <div class="toolbar">
+          <button id="new-entry" class="btn" type="button">New Entry</button>
+          <button id="delete-entry" class="ghost" type="button">Delete</button>
+        </div>
+        <input id="search-input" class="search" type="search" placeholder="Search title, author, size, or tag">
+        <div id="entry-list" class="entry-list"></div>
+      </aside>
+
+      <main class="editor">
+        <div class="editor-head">
+          <div>
+            <h2 id="form-title">New Entry</h2>
+            <p>Form changes only update the in-page draft. The ID is auto-generated and locked. Nothing overwrites the old JSON until you press <code>Save All Changes</code>.</p>
+          </div>
+          <div class="actions">
+            <button id="reset-form" class="ghost" type="button">Reset Draft</button>
+          </div>
+        </div>
+
+        <div id="status" class="note">Loaded current doors.json. Edit a draft and then use Save All Changes when you are ready.</div>
+        <div id="save-progress" class="progress" hidden>
+          <div class="progress-head">
+            <div class="progress-label" id="save-progress-label">Preparing save...</div>
+            <div class="progress-percent" id="save-progress-percent">0%</div>
+          </div>
+          <div class="progress-track"><div id="save-progress-fill" class="progress-fill"></div></div>
+        </div>
+
+        <form id="door-form" class="grid" autocomplete="off">
+          <div class="field">
+            <label for="door-id">ID</label>
+            <input id="door-id" name="id" placeholder="auto-generated" readonly disabled aria-disabled="true" tabindex="-1">
+          </div>
+          <div class="field">
+            <label for="door-size">Door Size</label>
+            <select id="door-size" name="doorSize">
+              <option value="2x2">2x2</option>
+              <option value="3x3">3x3</option>
+              <option value="4x4">4x4</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="door-title">Title</label>
+            <input id="door-title" name="title" placeholder="Compact 2x2 Door">
+          </div>
+          <div class="field">
+            <label for="door-author">Author</label>
+            <input id="door-author" name="author" placeholder="Jason">
+          </div>
+          <div class="field">
+            <label for="minecraft-version">Minecraft Version</label>
+            <input id="minecraft-version" name="minecraftVersion" placeholder="1.20.4">
+          </div>
+          <div class="field-full">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" placeholder="Short card summary..."></textarea>
+          </div>
+
+          <div class="field-full section">
+            <div class="section-title"><strong>Timing And Size</strong></div>
+            <div class="field-group">
+              <div class="field">
+                <label for="size-a">Non-Air Blocks</label>
+                <input id="size-a" name="sizeA" type="number" min="0" placeholder="82">
+              </div>
+              <div class="field">
+                <label for="open-ticks">Open Ticks</label>
+                <input id="open-ticks" name="openTicks" type="number" min="0" placeholder="8">
+              </div>
+              <div class="field">
+                <label for="close-ticks">Close Ticks</label>
+                <input id="close-ticks" name="closeTicks" type="number" min="0" placeholder="8">
+              </div>
+              <div class="field">
+                <label for="bounds-w">Bounds Width</label>
+                <input id="bounds-w" name="boundsW" type="number" min="0" placeholder="7">
+              </div>
+              <div class="field">
+                <label for="bounds-h">Bounds Height</label>
+                <input id="bounds-h" name="boundsH" type="number" min="0" placeholder="6">
+              </div>
+              <div class="field">
+                <label for="bounds-d">Bounds Depth</label>
+                <input id="bounds-d" name="boundsD" type="number" min="0" placeholder="4">
+              </div>
+            </div>
+          </div>
+
+          <div class="field-full section">
+            <div class="section-title"><strong>Links And Tags</strong></div>
+            <div class="grid">
+              <div class="field">
+                <label for="video-url">Video URL</label>
+                <input id="video-url" name="videoUrl" placeholder="https://...">
+              </div>
+              <div class="field">
+                <label for="tags">Tags</label>
+                <input id="tags" name="tags" placeholder="2x2, piston, compact, flush">
+              </div>
+            </div>
+          </div>
+
+          <div class="field-full section">
+            <div class="section-title"><strong>Files</strong><span class="small">Choose a file and it will be copied into the selected door-size folder while keeping the original filename.</span></div>
+            <div class="files-grid">
+              <div class="field">
+                <label for="file-litematic">.litematic</label>
+                <div class="file-row">
+                  <input id="file-litematic" name="fileLitematic" placeholder="./schematics/2x2/your-door-id/and-gate.litematic">
+                  <button class="upload-btn" type="button" data-upload-format="litematic">Choose File</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="file-schem">.schem</label>
+                <div class="file-row">
+                  <input id="file-schem" name="fileSchem" placeholder="./schematics/2x2/your-door-id/example.schem">
+                  <button class="upload-btn" type="button" data-upload-format="schem">Choose File</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="file-mcstructure">.mcstructure</label>
+                <div class="file-row">
+                  <input id="file-mcstructure" name="fileMcstructure" placeholder="./schematics/2x2/your-door-id/example.mcstructure">
+                  <button class="upload-btn" type="button" data-upload-format="mcstructure">Choose File</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <section class="section">
+          <div class="section-title"><strong>JSON Preview</strong><span class="small">Current draft payload</span></div>
+          <div id="json-preview" class="json-box"></div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const ui = {
+      list: document.getElementById("entry-list"),
+      search: document.getElementById("search-input"),
+      form: document.getElementById("door-form"),
+      title: document.getElementById("form-title"),
+      status: document.getElementById("status"),
+      saveProgress: document.getElementById("save-progress"),
+      saveProgressLabel: document.getElementById("save-progress-label"),
+      saveProgressPercent: document.getElementById("save-progress-percent"),
+      saveProgressFill: document.getElementById("save-progress-fill"),
+      jsonPreview: document.getElementById("json-preview"),
+      newEntry: document.getElementById("new-entry"),
+      deleteEntry: document.getElementById("delete-entry"),
+      resetForm: document.getElementById("reset-form"),
+      reloadJson: document.getElementById("reload-json"),
+      saveAll: document.getElementById("save-all"),
+      uploadButtons: Array.from(document.querySelectorAll("[data-upload-format]"))
+    };
+
+    const state = {
+      items: [],
+      selectedId: null,
+      selectedIsNew: false,
+      query: "",
+      draftDirty: false,
+      loaded: false,
+      sourceFilesById: {}
+    };
+
+    const emptyEntry = () => ({
+      id: "",
+      title: "",
+      author: "",
+      description: "",
+      minecraftVersion: "",
+      doorSize: "2x2",
+      tags: [],
+      sizeA: { label: "Non-air blocks", value: null },
+      sizeB: { label: "Bounding box (W x H x D)", width: null, height: null, depth: null },
+      time: { openTicks: null, closeTicks: null, totalTicks: null },
+      videoUrl: "",
+      files: { litematic: null, schem: null, mcstructure: null }
+    });
+
+    function toInt(value) {
+      if (value === "" || value == null) return null;
+      const parsed = Number.parseInt(value, 10);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    function slugify(value) {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .replace(/-+/g, "-");
+    }
+
+    function buildGeneratedId({ title, author, doorSize }, currentId = null) {
+      const authorPart = slugify(author) || "unknown";
+      const titlePart = slugify(title) || "door";
+      const sizePart = slugify(doorSize) || "door";
+      const base = `${authorPart}-${titlePart}-${sizePart}`;
+      const taken = new Set(state.items.map((item) => item.id).filter((id) => id && id !== currentId));
+      if (!taken.has(base)) return base;
+      let index = 2;
+      while (taken.has(`${base}-${index}`)) index += 1;
+      return `${base}-${index}`;
+    }
+
+    function computePreviewId() {
+      if (!state.selectedIsNew && state.selectedId && state.items.some((item) => item.id === state.selectedId)) {
+        return state.selectedId;
+      }
+      return buildGeneratedId({
+        title: ui.form.elements.title.value.trim(),
+        author: ui.form.elements.author.value.trim(),
+        doorSize: ui.form.elements.doorSize.value
+      }, state.selectedId);
+    }
+
+    function refreshIdPreview() {
+      ui.form.elements.id.value = computePreviewId();
+    }
+
+    function normalizeLocalFilePaths(doorId, doorSize, files) {
+      const normalized = { ...files };
+      const formats = ["litematic", "schem", "mcstructure"];
+      formats.forEach((format) => {
+        const current = normalized[format];
+        if (!current) return;
+        const localPattern = /^\.\/schematics\/[^/]+\/[^/]+\/[^/]+\.(litematic|schem|mcstructure)$/i;
+        if (!localPattern.test(current)) return;
+        const filename = current.split("/").pop();
+        normalized[format] = `./schematics/${doorSize}/${doorId}/${filename}`;
+      });
+      return normalized;
+    }
+
+    function normalizeEntry(entry) {
+      const base = emptyEntry();
+      const merged = {
+        ...base,
+        ...entry,
+        tags: Array.isArray(entry.tags) ? entry.tags.filter(Boolean) : [],
+        sizeA: { ...base.sizeA, ...(entry.sizeA || {}) },
+        sizeB: { ...base.sizeB, ...(entry.sizeB || {}) },
+        time: { ...base.time, ...(entry.time || {}) },
+        files: { ...base.files, ...(entry.files || {}) }
+      };
+      return merged;
+    }
+
+    function snapshotSourceFiles(files) {
+      return {
+        litematic: files?.litematic || null,
+        schem: files?.schem || null,
+        mcstructure: files?.mcstructure || null
+      };
+    }
+
+    function exportPayload() {
+      return {
+        version: 2,
+        description: "Catalog of redstone door builds and their downloadable schematic files.",
+        items: state.items.map((item) => {
+          const cleaned = normalizeEntry(item);
+          delete cleaned.__sourceId;
+          return cleaned;
+        })
+      };
+    }
+
+    function setStatus(message, tone = "normal") {
+      ui.status.className = "note" + (tone === "warn" ? " warn" : "");
+      ui.status.textContent = message;
+    }
+
+    function setSaveProgress(percent, label) {
+      if (!ui.saveProgress || !ui.saveProgressFill || !ui.saveProgressLabel || !ui.saveProgressPercent) return;
+      const safePercent = Math.max(0, Math.min(100, percent));
+      ui.saveProgress.hidden = false;
+      ui.saveProgressFill.style.width = `${safePercent}%`;
+      ui.saveProgressLabel.textContent = label;
+      ui.saveProgressPercent.textContent = `${Math.round(safePercent)}%`;
+    }
+
+    function hideSaveProgress() {
+      if (!ui.saveProgress) return;
+      ui.saveProgress.hidden = true;
+      ui.saveProgressFill.style.width = "0%";
+      ui.saveProgressLabel.textContent = "Preparing save...";
+      if (ui.saveProgressPercent) ui.saveProgressPercent.textContent = "0%";
+    }
+
+    function validateEntry(entry, showMessage = true) {
+      if (!entry.title) {
+        if (showMessage) setStatus("Title is required before this draft can be saved.", "warn");
+        return false;
+      }
+      if (!entry.author) {
+        if (showMessage) setStatus("Author is required before this draft can be saved.", "warn");
+        return false;
+      }
+      return true;
+    }
+
+    function sortItems() {
+      state.items.sort((a, b) => (a.sizeA?.value ?? 999999) - (b.sizeA?.value ?? 999999) || a.title.localeCompare(b.title));
+    }
+
+    function renderList() {
+      const query = state.query.trim().toLowerCase();
+      const filtered = state.items.filter((item) => {
+        if (!query) return true;
+        return [item.title, item.author, item.doorSize, ...(item.tags || [])].join(" ").toLowerCase().includes(query);
+      });
+
+      ui.list.innerHTML = "";
+      filtered.forEach((item) => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "list-card" + (item.id === state.selectedId ? " active" : "");
+        card.innerHTML = `<div class="list-top"><div><h3>${item.title || "(Untitled)"}</h3><div class="small">By ${item.author || "Unknown"}</div></div><span class="pill">${item.doorSize || "?"}</span></div><div class="small">${(item.tags || []).slice(0, 4).join(" · ") || "No tags yet"}</div>`;
+        card.addEventListener("click", () => selectEntry(item.id));
+        ui.list.appendChild(card);
+      });
+
+      if (!filtered.length) {
+        const empty = document.createElement("div");
+        empty.className = "list-card";
+        empty.innerHTML = `<div class="small">No matching entries.</div>`;
+        ui.list.appendChild(empty);
+      }
+    }
+
+    function currentFormEntry() {
+      const form = ui.form.elements;
+      const nextId = computePreviewId();
+      const doorSize = form.doorSize.value;
+      const files = {
+        litematic: form.fileLitematic.value.trim() || null,
+        schem: form.fileSchem.value.trim() || null,
+        mcstructure: form.fileMcstructure.value.trim() || null
+      };
+      const normalizedFiles = normalizeLocalFilePaths(nextId, doorSize, files);
+      const openTicks = toInt(form.openTicks.value);
+      const closeTicks = toInt(form.closeTicks.value);
+      return normalizeEntry({
+        id: nextId,
+        __sourceId: state.selectedId || null,
+        title: form.title.value.trim(),
+        author: form.author.value.trim(),
+        description: form.description.value.trim(),
+        minecraftVersion: form.minecraftVersion.value.trim(),
+        doorSize,
+        tags: form.tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+        sizeA: { label: "Non-air blocks", value: toInt(form.sizeA.value) },
+        sizeB: {
+          label: "Bounding box (W x H x D)",
+          width: toInt(form.boundsW.value),
+          height: toInt(form.boundsH.value),
+          depth: toInt(form.boundsD.value)
+        },
+        time: {
+          openTicks,
+          closeTicks,
+          totalTicks: openTicks != null || closeTicks != null ? (openTicks || 0) + (closeTicks || 0) : null
+        },
+        videoUrl: form.videoUrl.value.trim(),
+        files: normalizedFiles
+      });
+    }
+
+    function updateJsonPreview() {
+      if (!ui.jsonPreview) return;
+      ui.jsonPreview.textContent = JSON.stringify(currentFormEntry(), null, 2);
+    }
+
+    function syncDraftIntoItems() {
+      const draft = currentFormEntry();
+      refreshIdPreview();
+
+      if (!draft.title && !draft.author && !draft.description && !draft.videoUrl && !draft.files.litematic && !draft.files.schem && !draft.files.mcstructure) {
+        return;
+      }
+      if (!validateEntry(draft, false)) {
+        state.draftDirty = true;
+        return;
+      }
+      const selectedIndex = state.selectedId ? state.items.findIndex((item) => item.id === state.selectedId) : -1;
+      const existingIndex = state.items.findIndex((item) => item.id === draft.id);
+      if (selectedIndex >= 0) state.items[selectedIndex] = draft;
+      else if (existingIndex >= 0) state.items[existingIndex] = draft;
+      else state.items.push(draft);
+      state.selectedId = draft.id;
+      state.selectedIsNew = false;
+      sortItems();
+      renderList();
+      state.draftDirty = true;
+      updateJsonPreview();
+      setStatus("Draft updated. Press Save All Changes when you are ready.");
+    }
+
+    function fillForm(entry) {
+      ui.form.elements.id.value = entry.id || "";
+      ui.form.elements.title.value = entry.title || "";
+      ui.form.elements.author.value = entry.author || "";
+      ui.form.elements.description.value = entry.description || "";
+      ui.form.elements.minecraftVersion.value = entry.minecraftVersion || "";
+      ui.form.elements.doorSize.value = entry.doorSize || "2x2";
+      ui.form.elements.sizeA.value = entry.sizeA?.value ?? "";
+      ui.form.elements.openTicks.value = entry.time?.openTicks ?? "";
+      ui.form.elements.closeTicks.value = entry.time?.closeTicks ?? "";
+      ui.form.elements.boundsW.value = entry.sizeB?.width ?? "";
+      ui.form.elements.boundsH.value = entry.sizeB?.height ?? "";
+      ui.form.elements.boundsD.value = entry.sizeB?.depth ?? "";
+      ui.form.elements.videoUrl.value = entry.videoUrl || "";
+      ui.form.elements.tags.value = (entry.tags || []).join(", ");
+      ui.form.elements.fileLitematic.value = entry.files?.litematic || "";
+      ui.form.elements.fileSchem.value = entry.files?.schem || "";
+      ui.form.elements.fileMcstructure.value = entry.files?.mcstructure || "";
+      ui.title.textContent = entry.id ? `Editing ${entry.title || entry.id}` : "New Entry";
+      state.draftDirty = false;
+      refreshIdPreview();
+      updateJsonPreview();
+
+    }
+
+    function selectEntry(id) {
+      state.selectedId = id;
+      state.selectedIsNew = false;
+      const entry = state.items.find((item) => item.id === id) || emptyEntry();
+      fillForm(entry);
+      renderList();
+    }
+
+    function resetFormToEmpty() {
+      state.selectedId = null;
+      state.selectedIsNew = true;
+      fillForm(emptyEntry());
+      renderList();
+      setStatus("Ready to create a new draft.");
+    }
+
+    async function loadJson() {
+      const response = await fetch("./doors.json", { cache: "no-store" });
+      if (!response.ok) throw new Error(`doors.json HTTP ${response.status}`);
+      const payload = await response.json();
+      state.items = (payload.items || []).map((item) => normalizeEntry(item));
+      state.sourceFilesById = {};
+      state.items.forEach((item) => {
+        state.sourceFilesById[item.id] = snapshotSourceFiles(item.files);
+      });
+      sortItems();
+      state.loaded = true;
+      state.selectedIsNew = false;
+      if (state.items.length) selectEntry(state.items[0].id);
+      else resetFormToEmpty();
+      setStatus("Loaded current doors.json.");
+    }
+
+    async function saveAllChanges() {
+      if (!state.draftDirty) {
+        setStatus("No unsaved draft changes right now.");
+        return;
+      }
+      ui.saveAll.disabled = true;
+      setSaveProgress(12, "Preparing payload...");
+      const payload = exportPayload();
+      setSaveProgress(38, "Writing doors.json...");
+      const response = await fetch("/__write-json", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      setSaveProgress(72, "Reloading latest data...");
+      const text = await response.text();
+      if (!response.ok) throw new Error(text || `Save HTTP ${response.status}`);
+      state.draftDirty = false;
+      await loadJson();
+      setSaveProgress(100, "Save complete.");
+      setStatus("Saved all changes. doors.json has been overwritten with the new data.");
+      setTimeout(() => {
+        hideSaveProgress();
+        ui.saveAll.disabled = false;
+      }, 900);
+    }
+
+    async function uploadFileForFormat(format) {
+      const author = ui.form.elements.author.value.trim();
+      const title = ui.form.elements.title.value.trim();
+      if (!author || !title) {
+        setStatus("Fill author and title first so the file can be placed into the correct folder.", "warn");
+        return;
+      }
+
+      refreshIdPreview();
+      const doorId = ui.form.elements.id.value.trim();
+      const doorSize = ui.form.elements.doorSize.value;
+      const picker = document.createElement("input");
+      picker.type = "file";
+      picker.accept = `.${format}`;
+      picker.onchange = async () => {
+        const file = picker.files && picker.files[0];
+        if (!file) return;
+        try {
+          setStatus(`Uploading ${file.name}...`);
+          const response = await fetch("/__upload", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/octet-stream",
+              "X-Upload-Door-Id": doorId,
+              "X-Upload-Door-Size": doorSize,
+              "X-Upload-Format": format,
+              "X-Upload-Filename": encodeURIComponent(file.name)
+            },
+            body: file
+          });
+          if (!response.ok) throw new Error(await response.text() || `Upload HTTP ${response.status}`);
+          const result = await response.json();
+          if (format === "litematic") ui.form.elements.fileLitematic.value = result.path || "";
+          if (format === "schem") ui.form.elements.fileSchem.value = result.path || "";
+          if (format === "mcstructure") ui.form.elements.fileMcstructure.value = result.path || "";
+          syncDraftIntoItems();
+          setStatus(`Stored ${file.name} as ${result.filename}. Relative path saved as ${result.path}. Press Save All Changes to overwrite the old JSON.`);
+        } catch (error) {
+          setStatus(`Upload failed: ${error.message}`, "warn");
+        }
+      };
+      picker.click();
+    }
+
+    function deleteCurrentEntry() {
+      if (!state.selectedId) {
+        setStatus("Pick an entry to delete first.", "warn");
+        return;
+      }
+      const current = state.items.find((item) => item.id === state.selectedId);
+      if (!current) return;
+      const confirmed = window.confirm(`你確定要刪掉這筆作品嗎？\n\n${current.title} (${current.id})`);
+      if (!confirmed) return;
+      state.items = state.items.filter((item) => item.id !== current.id);
+      state.selectedId = null;
+      state.selectedIsNew = state.items.length === 0;
+      state.draftDirty = true;
+      sortItems();
+      renderList();
+      if (state.items.length) fillForm(state.items[0]);
+      else fillForm(emptyEntry());
+      setStatus(`Deleted ${current.title} from the draft. Press Save All Changes to overwrite the old JSON.`);
+    }
+
+    ui.search.addEventListener("input", () => {
+      state.query = ui.search.value;
+      renderList();
+    });
+
+    ui.newEntry.addEventListener("click", () => {
+      resetFormToEmpty();
+      refreshIdPreview();
+      updateJsonPreview();
+    });
+    ui.deleteEntry.addEventListener("click", deleteCurrentEntry);
+    ui.resetForm.addEventListener("click", () => {
+      const current = state.selectedId ? state.items.find((item) => item.id === state.selectedId) : emptyEntry();
+      fillForm(current || emptyEntry());
+      setStatus("Draft reset.");
+    });
+    ui.reloadJson.addEventListener("click", async () => {
+      try { await loadJson(); }
+      catch (error) { setStatus(`Reload failed: ${error.message}`, "warn"); }
+    });
+    ui.saveAll.addEventListener("click", () => {
+      saveAllChanges().catch((error) => {
+        ui.saveAll.disabled = false;
+        hideSaveProgress();
+        setStatus(`Save failed: ${error.message}`, "warn");
+      });
+    });
+
+    ["title", "author", "doorSize", "minecraftVersion", "description", "sizeA", "openTicks", "closeTicks", "boundsW", "boundsH", "boundsD", "videoUrl", "tags", "fileLitematic", "fileSchem", "fileMcstructure"].forEach((fieldName) => {
+      ui.form.elements[fieldName].addEventListener("input", syncDraftIntoItems);
+    });
+    ["title", "author", "doorSize", "minecraftVersion", "description", "sizeA", "openTicks", "closeTicks", "boundsW", "boundsH", "boundsD", "videoUrl", "tags", "fileLitematic", "fileSchem", "fileMcstructure"].forEach((fieldName) => {
+      ui.form.elements[fieldName].addEventListener("input", updateJsonPreview);
+    });
+
+    ui.uploadButtons.forEach((button) => {
+      button.addEventListener("click", () => uploadFileForFormat(button.getAttribute("data-upload-format")));
+    });
+
+    loadJson().catch((error) => {
+      setStatus(`Failed to load doors.json: ${error.message}`, "warn");
+      resetFormToEmpty();
+    });
+  </script>
+</body>
+</html>
+

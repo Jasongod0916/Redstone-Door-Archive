@@ -1,0 +1,665 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redstone Door Archive</title>
+  <style>
+    :root{--bg:#07111d;--bg2:#0b1b30;--panel:rgba(10,18,31,.9);--card:rgba(14,25,43,.92);--line:rgba(148,175,214,.14);--text:#edf5ff;--muted:#99adc7;--gold:#ffc466;--mint:#8fe0c9;--danger:#ffb2a2}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%}
+    body{padding:24px;color:var(--text);font-family:"Segoe UI Variable Display","Bahnschrift",sans-serif;background:radial-gradient(circle at 10% 0,rgba(92,135,255,.16),transparent 28%),radial-gradient(circle at 90% 12%,rgba(143,224,201,.1),transparent 18%),linear-gradient(180deg,var(--bg2),var(--bg))}
+    button,select,input{font:inherit}a{color:inherit}.shell{width:min(1480px,100%);margin:0 auto;display:grid;gap:20px}
+    .hero,.toolbar,.card,.modal-frame{border:1px solid var(--line);box-shadow:0 28px 80px rgba(0,0,0,.34)}
+    .hero{border-radius:32px;padding:28px;display:grid;gap:24px;overflow:hidden;background:linear-gradient(135deg,rgba(21,34,56,.98),rgba(9,14,25,.98))}
+    .hero-top{display:grid;grid-template-columns:1fr;gap:24px}.eyebrow{display:inline-flex;width:fit-content;padding:8px 14px;border-radius:999px;background:rgba(143,224,201,.12);color:var(--mint);font-size:12px;letter-spacing:.09em;text-transform:uppercase}
+    h1,h2,h3,p{margin:0}.hero h1{font-size:clamp(42px,7vw,76px);line-height:.92;letter-spacing:-.04em}.hero p{color:var(--muted);line-height:1.65}.hero-copy{display:grid;gap:12px}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.stat,.feature,.toolbar,.card,.viewer-side section{background:rgba(255,255,255,.03)}.stat,.feature,.card{border-radius:24px}
+    .stat{border:1px solid var(--line);padding:14px;display:grid;gap:6px}.stat strong,.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.stat span{font-size:28px;font-weight:700}
+    .feature{border:1px solid rgba(255,196,102,.22);padding:18px;display:grid;gap:12px;background:linear-gradient(180deg,rgba(255,196,102,.08),rgba(255,255,255,.03))}.tags{display:flex;flex-wrap:wrap;gap:8px}
+    .tag{padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:12px;color:var(--muted)}
+    .toolbar{position:sticky;top:20px;z-index:5;border-radius:28px;padding:18px;display:grid;gap:16px;background:linear-gradient(180deg,rgba(11,19,33,.98),rgba(8,13,23,.98))}
+    .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}.group{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .pill,.select,.btn,.link-btn,.close{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer}.pill{padding:10px 14px;border-radius:999px}.pill.active{background:linear-gradient(180deg,rgba(255,196,102,.18),rgba(255,196,102,.08));border-color:rgba(255,196,102,.4);color:#fff3d3}.select{padding:11px 14px;border-radius:16px;min-width:190px}
+    .summary{display:flex;flex-wrap:wrap;gap:10px}.chip{padding:10px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.035);color:var(--muted);font-size:13px}.chip strong{color:var(--text)}
+    .results{display:grid;gap:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+    .site-footer{margin-top:8px;padding:22px 24px;border-radius:28px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(12,20,34,.96),rgba(7,12,21,.98));box-shadow:0 22px 50px rgba(0,0,0,.24);display:grid;gap:18px}
+    .footer-top{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:18px}
+    .footer-brand{display:grid;gap:8px}
+    .footer-brand strong{font-size:18px;letter-spacing:-.02em}
+    .footer-brand p,.footer-meta p{color:var(--muted);line-height:1.7}
+    .footer-meta{display:grid;gap:12px}
+    .footer-badges{display:flex;flex-wrap:wrap;gap:10px}
+    .footer-badge{display:inline-flex;align-items:center;padding:9px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--muted);font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+    .footer-bottom{padding-top:16px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center}
+    .footer-links{display:flex;flex-wrap:wrap;gap:10px}
+    .footer-link{display:inline-flex;align-items:center;justify-content:center;padding:11px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);text-decoration:none;color:var(--text)}
+    .footer-link:hover{border-color:rgba(143,224,201,.25);background:rgba(255,255,255,.06)}
+    .footer-note{color:var(--muted);font-size:13px}
+    .card{padding:18px;display:grid;gap:16px;background:linear-gradient(180deg,rgba(18,30,50,.96),rgba(9,15,27,.98))}
+    .size{display:inline-flex;width:fit-content;padding:7px 10px;border-radius:999px;background:rgba(143,224,201,.12);color:var(--mint);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+    .rank{display:inline-flex;width:fit-content;padding:7px 10px;border-radius:999px;background:linear-gradient(180deg,rgba(255,196,102,.18),rgba(255,196,102,.08));color:var(--gold);font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;border:1px solid rgba(255,196,102,.18)}
+    .author{margin-top:6px;color:var(--muted);font-size:14px}
+    .desc{color:var(--muted);line-height:1.7;min-height:50px;max-width:54ch}
+    .card-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:stretch}
+    .card-info{display:grid;gap:16px;align-content:start;padding:18px 18px 16px;border-radius:24px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+    .card-meta-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+    .card-heading{display:grid;gap:8px}
+    .card-heading h3{font-size:clamp(28px,3vw,34px);line-height:.96;letter-spacing:-.04em}
+    .card-author-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--muted);font-size:14px}
+    .card-author-row .dot{width:4px;height:4px;border-radius:999px;background:rgba(153,173,199,.45)}
+    .card-desc{padding:2px 0 4px}
+    .preview{min-height:260px;padding:12px;border-radius:24px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+    .preview-inner{position:absolute;inset:12px;border-radius:18px;overflow:hidden;background:#8fa8cf}
+    .preview-canvas{display:block;width:100%;height:100%;background:#8fa8cf}
+    .preview-progress{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(280px,calc(100% - 28px));padding:10px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(7,13,22,.84);backdrop-filter:blur(10px);display:grid;gap:8px;z-index:3}
+    .preview-progress[hidden]{display:none}
+    .preview-progress-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    .preview-progress-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#d9e6ff}
+    .preview-progress-percent{font-size:11px;font-weight:700;color:#eef5ff}
+    .preview-progress-track{height:8px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05)}
+    .preview-progress-fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,rgba(143,224,201,.92),rgba(255,196,102,.92));transition:width .24s ease}
+    .preview-label{position:absolute;right:24px;bottom:24px;padding:9px 14px;border-radius:999px;background:rgba(7,13,22,.72);backdrop-filter:blur(8px);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#eff6ff;text-align:center;border:1px solid rgba(255,255,255,.08);cursor:pointer}
+    .preview-label:hover{border-color:rgba(255,196,102,.38);background:rgba(11,18,30,.82)}
+    .preview-stats{display:grid;grid-template-columns:1fr;gap:2px;padding:14px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.06);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015))}
+    .preview-stat{padding:12px 0;border-radius:0;background:transparent;border:0;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .preview-stat:last-child{border-bottom:0}
+    .preview-stat strong{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .preview-stat span{font-size:16px;font-weight:700;line-height:1.1;text-align:right}
+    .card-tags{display:flex;flex-wrap:wrap;gap:8px;padding-top:2px}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;padding-top:2px}
+    .btn,.link-btn{padding:12px 16px;border-radius:16px;text-decoration:none}
+    .btn{background:linear-gradient(180deg,rgba(255,196,102,.2),rgba(255,196,102,.1));font-weight:700;color:#fff4db}
+    .link-btn{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.08);min-width:88px;justify-content:center}
+    .link-btn:hover{border-color:rgba(143,224,201,.25);background:rgba(255,255,255,.06)}
+    .link-btn[aria-disabled="true"]{pointer-events:none;opacity:.45}
+    .file-menu{position:relative}
+    .file-trigger{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    .file-trigger::after{content:"▾";font-size:11px;opacity:.8}
+    .file-dropdown{position:absolute;left:0;top:calc(100% + 10px);min-width:170px;padding:8px;border-radius:18px;border:1px solid rgba(255,255,255,.09);background:rgba(7,13,22,.96);box-shadow:0 18px 36px rgba(0,0,0,.3);display:none;z-index:4}
+    .file-menu.open .file-dropdown{display:grid;gap:6px}
+    .file-option{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-radius:12px;color:var(--text);text-decoration:none;background:rgba(255,255,255,.03);border:1px solid transparent;white-space:nowrap}
+    .file-option:hover{background:rgba(255,255,255,.06);border-color:rgba(143,224,201,.2)}
+    .file-ext{color:var(--mint);font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+    .empty{padding:40px 24px;border-radius:28px;border:1px dashed rgba(255,255,255,.13);background:rgba(255,255,255,.03);text-align:center;color:var(--muted)}
+    .modal{position:fixed;inset:0;padding:18px;background:rgba(3,8,15,.78);backdrop-filter:blur(12px);display:none;z-index:20}.modal.open{display:block}.modal-frame{width:min(1500px,100%);height:calc(100vh - 36px);margin:0 auto;border-radius:34px;overflow:hidden;background:linear-gradient(180deg,rgba(10,18,30,.98),rgba(6,11,20,.98));display:grid;grid-template-rows:auto minmax(0,1fr)}
+    .modal-top{padding:20px 22px;border-bottom:1px solid rgba(255,255,255,.06);display:grid;gap:16px}.modal-head{display:flex;justify-content:space-between;gap:16px;align-items:start}.modal-head h2{font-size:clamp(28px,5vw,46px);line-height:.95}.modal-head p{margin-top:8px;color:var(--muted);max-width:720px;line-height:1.6}.close{min-width:54px;height:54px;border-radius:18px;font-size:18px}
+    .viewer-controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}.viewer-buttons,.viewer-badges{display:flex;flex-wrap:wrap;gap:8px}.viewer-badge{padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:var(--muted);font-size:13px}
+    .modal-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;min-height:0}.stage{position:relative;min-height:720px;background:#8fa8cf}canvas{display:block;width:100%;height:100%;background:#8fa8cf}
+    .overlay{position:absolute;left:18px;top:18px;display:grid;gap:10px;max-width:330px}.overlay-card{padding:14px;border-radius:18px;background:rgba(7,13,22,.7);backdrop-filter:blur(10px);display:grid;gap:6px}.overlay-card span{line-height:1.45}
+    .viewer-side{padding:18px;border-left:1px solid rgba(255,255,255,.06);background:rgba(8,14,24,.9);display:grid;gap:16px;overflow:auto}.viewer-side section{padding:16px;border-radius:22px;border:1px solid rgba(255,255,255,.06);display:grid;gap:12px}
+    .side-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.side-metric{padding:12px;border-radius:16px;background:rgba(255,255,255,.03);display:grid;gap:4px}.side-metric strong{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .side-link{display:inline-flex;justify-content:center;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.04);text-decoration:none}.side-link.disabled{opacity:.4;pointer-events:none}
+    .video-embed{position:relative;width:100%;aspect-ratio:16/9;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+    .video-embed[hidden]{display:none}
+    .video-embed iframe{width:100%;height:100%;border:0;display:block}
+    .video-fallback{display:grid;gap:10px}
+    .video-fallback[hidden]{display:none}
+    .notes{display:grid;gap:8px;max-height:280px;overflow:auto}.note{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);color:var(--muted);font-size:13px;line-height:1.45}.note.warn{border-color:rgba(255,178,162,.28);background:rgba(255,178,162,.08);color:#ffd8d0}
+    .load-progress{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);width:min(420px,calc(100vw - 32px));padding:14px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(7,13,22,.92);backdrop-filter:blur(12px);box-shadow:0 24px 50px rgba(0,0,0,.35);display:grid;gap:10px;z-index:999}
+    .load-progress[hidden]{display:none}
+    .load-progress-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
+    .load-progress-label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .load-progress-percent{font-size:13px;font-weight:700;color:#eef5ff}
+    .load-progress-track{height:10px;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.05)}
+    .load-progress-fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,rgba(143,224,201,.92),rgba(255,196,102,.92));transition:width .24s ease}
+    @media (max-width:1100px){.hero-top,.modal-body,.footer-top{grid-template-columns:1fr}.viewer-side{border-left:0;border-top:1px solid rgba(255,255,255,.06)}}
+    @media (max-width:720px){body{padding:14px}.hero,.toolbar,.modal-frame{border-radius:24px}.stats,.side-grid,.card-main,.preview-stats{grid-template-columns:1fr}.modal{padding:10px}.stage{min-height:500px}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div class="hero-copy">
+          <span class="eyebrow">Redstone Door Archive</span>
+          <h1>Redstone Door Archive</h1>
+          <p>This archive is built to collect standout redstone door designs, compare them by size and timing, and make it easier to study which builds feel strongest overall.</p>
+          <div class="stats">
+            <div class="stat"><strong>Current Size</strong><span id="hero-size">2x2</span></div>
+            <div class="stat"><strong>Visible Builds</strong><span id="hero-count">0</span></div>
+            <div class="stat"><strong>Sort Rule</strong><span id="hero-sort">Overall Time</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="toolbar">
+      <div class="row">
+        <div class="group"><span class="label">Door Size</span><div id="size-tabs" class="group"></div></div>
+        <div class="group">
+          <span class="label">Sort By</span>
+          <div id="sort-menu" class="file-menu">
+            <button id="sort-trigger" class="select file-trigger" type="button">Non-Air Blocks</button>
+            <div id="sort-dropdown" class="file-dropdown"></div>
+          </div>
+        </div>
+      </div>
+      <div class="summary">
+        <span class="chip"><strong id="summary-count">0</strong> builds shown</span>
+        <span class="chip">Default filter starts on <strong>2x2</strong></span>
+        <span class="chip">Open <strong>View 3D</strong> for the large interactive viewer</span>
+      </div>
+    </section>
+    <section class="results">
+      <div><h2 id="results-title">2x2 Builds</h2><p id="results-subtitle" class="author">Compare timings below, then inspect any design in the large viewer.</p></div>
+      <div id="catalog-grid" class="grid"></div>
+      <div id="empty-state" class="empty" hidden>No builds matched the current filters.</div>
+    </section>
+    <footer class="site-footer">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <span class="eyebrow">Footer</span>
+          <strong>Redstone Door Archive</strong>
+          <p>Built to collect standout redstone door designs, compare real builds by size and timing, and study what makes a better door.</p>
+          <div class="footer-badges">
+            <span class="footer-badge">2x2 / 3x3 / 4x4 Builds</span>
+            <span class="footer-badge">Interactive 3D Viewer</span>
+            <span class="footer-badge">Design Comparison Archive</span>
+          </div>
+        </div>
+        <div class="footer-meta">
+          <div>
+            <strong class="label">Archive Goal</strong>
+            <p>The goal is to keep excellent door builds in one place, compare tradeoffs clearly, and make it easier to spot the strongest overall designs.</p>
+          </div>
+          <div>
+            <strong class="label">Viewer Credit</strong>
+            <p>3D viewer powered by Schemat.io, using schematic-renderer for interactive schematic inspection.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-links">
+          <a class="footer-link" href="https://github.com/Schem-at/schematic-renderer" target="_blank" rel="noreferrer">schematic-renderer</a>
+          <a class="footer-link" href="https://schemat.io/" target="_blank" rel="noreferrer">Schemat.io</a>
+          <a class="footer-link" href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer">AGPL-3.0</a>
+        </div>
+        <div class="footer-note">Catalog UI by Jason. 3D inspection layer integrates upstream tooling from Schemat.io.</div>
+      </div>
+    </footer>
+  </div>
+  <div id="viewer-modal" class="modal" aria-hidden="true">
+    <div class="modal-frame">
+      <div class="modal-top">
+        <div class="modal-head">
+          <div><h2 id="viewer-title">Door Viewer</h2><p id="viewer-subtitle">Open any build from the list to inspect it here.</p></div>
+          <button id="close-viewer" type="button" class="close" aria-label="Close">✕</button>
+        </div>
+        <div class="viewer-controls">
+          <div class="viewer-buttons">
+            <button id="view-iso" class="pill" type="button">Isometric</button>
+            <button id="view-perspective" class="pill" type="button">Perspective</button>
+            <button id="view-fly" class="pill" type="button">Fly</button>
+            <button id="focus-camera" class="pill" type="button">Focus</button>
+            <label class="pill" for="file-input">Open Local File</label>
+            <input id="file-input" type="file" accept=".litematic,.schem,.mcstructure" hidden>
+          </div>
+          <div class="viewer-badges">
+            <span id="meta-status" class="viewer-badge">Idle</span>
+            <span id="meta-file" class="viewer-badge">No file</span>
+            <span class="viewer-badge">Mouse drag to rotate</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="stage">
+          <canvas id="scene"></canvas>
+          <div class="overlay"><div class="overlay-card"><strong class="label">3D View</strong><span>This larger view is dedicated to inspection. Rotate with the mouse, zoom with the wheel, and use the camera buttons for cleaner comparison shots.</span></div></div>
+        </div>
+        <aside class="viewer-side">
+          <section>
+            <span class="label">Build Stats</span>
+            <div class="side-grid">
+              <div class="side-metric"><strong>Door Size</strong><span id="meta-door-size">-</span></div>
+              <div class="side-metric"><strong>Author</strong><span id="meta-author">-</span></div>
+              <div class="side-metric"><strong>Non-Air</strong><span id="meta-size-a">-</span></div>
+              <div class="side-metric"><strong>Bounds</strong><span id="meta-size-b">-</span></div>
+              <div class="side-metric"><strong>Open</strong><span id="meta-open">-</span></div>
+              <div class="side-metric"><strong>Close</strong><span id="meta-close">-</span></div>
+            </div>
+          </section>
+          <section>
+            <span class="label">Video</span>
+            <div id="video-embed" class="video-embed" hidden>
+              <iframe id="video-frame" src="" title="Build video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+            </div>
+            <div id="video-fallback" class="video-fallback" hidden>
+              <a id="video-link" class="side-link disabled" href="#" target="_blank" rel="noreferrer">Open Video</a>
+            </div>
+          </section>
+          <section>
+            <span class="label">Viewer Notes</span>
+            <div id="notes" class="notes"><div class="note">Catalog ready. Use View 3D on any card to open the larger viewer.</div></div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <div id="load-progress" class="load-progress" hidden>
+    <div class="load-progress-head">
+      <div id="load-progress-label" class="load-progress-label">Loading 3D...</div>
+      <div id="load-progress-percent" class="load-progress-percent">0%</div>
+    </div>
+    <div class="load-progress-track"><div id="load-progress-fill" class="load-progress-fill"></div></div>
+  </div>
+  <script>
+    window.addEventListener("error", (event) => {
+      const target = event.target;
+      const div = document.createElement("div");
+      div.className = "note warn";
+      div.textContent = target instanceof HTMLScriptElement ? "Script load error: " + (target.getAttribute("src") || "(inline script)") : "Runtime error: " + (event.message || "unknown error");
+      document.getElementById("notes")?.prepend(div);
+    }, true);
+    window.addEventListener("unhandledrejection", (event) => {
+      const div = document.createElement("div");
+      div.className = "note warn";
+      div.textContent = "Unhandled rejection: " + (event.reason?.message || String(event.reason));
+      document.getElementById("notes")?.prepend(div);
+    });
+    const originalConsoleError = console.error.bind(console);
+    console.error = (...args) => {
+      const rendered = args.map((item) => item instanceof Error ? (item.stack || item.message) : String(item)).join(" | ");
+      if (rendered.includes("[ResourcePackManager] Failed to load state:") && rendered.includes("No cache found and no textures provided")) return;
+      if (rendered.includes("FFmpeg not found")) return;
+      const div = document.createElement("div");
+      div.className = "note warn";
+      div.textContent = "console.error: " + rendered;
+      document.getElementById("notes")?.prepend(div);
+      originalConsoleError(...args);
+    };
+  </script>
+  <script type="module">
+    async function loadClassicScript(src, id) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.id = id;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Failed to load script: " + src));
+        document.head.appendChild(script);
+      });
+    }
+    try {
+      const THREE = await import("./three.module.min.js");
+      window.THREE = THREE;
+      await loadClassicScript("./schematic-renderer/dist/schematic-renderer.umd.js", "renderer-script");
+      window.__rendererBootstrapReady = true;
+    } catch (error) {
+      window.__rendererBootstrapError = error;
+      window.dispatchEvent(new ErrorEvent("error", { message: error.message, error }));
+    }
+  </script>
+  <script>
+    const DEFAULT_RESOURCE_PACK_URL = "./schematic-renderer/dist/pack.zip";
+    const CATALOG_URL = "./doors.json";
+    const FILE_PRIORITY = ["litematic", "schem", "mcstructure"];
+    const SIZE_FILTERS = ["2x2", "3x3", "4x4"];
+    const SORTS = {
+      overall: { label: "Non-Air Blocks", get: (e) => e?.sizeA?.value ?? 999999 },
+      open: { label: "Opening Time", get: (e) => e?.time?.openTicks ?? 99999 },
+      close: { label: "Closing Time", get: (e) => e?.time?.closeTicks ?? 99999 }
+    };
+    const ui = {
+      sizeTabs: document.getElementById("size-tabs"), sortMenu: document.getElementById("sort-menu"), sortTrigger: document.getElementById("sort-trigger"), sortDropdown: document.getElementById("sort-dropdown"), grid: document.getElementById("catalog-grid"), empty: document.getElementById("empty-state"), summaryCount: document.getElementById("summary-count"), resultsTitle: document.getElementById("results-title"), resultsSubtitle: document.getElementById("results-subtitle"), heroSize: document.getElementById("hero-size"), heroCount: document.getElementById("hero-count"), heroSort: document.getElementById("hero-sort"), modal: document.getElementById("viewer-modal"), closeViewer: document.getElementById("close-viewer"), canvas: document.getElementById("scene"), fileInput: document.getElementById("file-input"), viewerTitle: document.getElementById("viewer-title"), viewerSubtitle: document.getElementById("viewer-subtitle"), metaStatus: document.getElementById("meta-status"), metaFile: document.getElementById("meta-file"), metaDoorSize: document.getElementById("meta-door-size"), metaAuthor: document.getElementById("meta-author"), metaSizeA: document.getElementById("meta-size-a"), metaSizeB: document.getElementById("meta-size-b"), metaOpen: document.getElementById("meta-open"), metaClose: document.getElementById("meta-close"), videoEmbed: document.getElementById("video-embed"), videoFrame: document.getElementById("video-frame"), videoFallback: document.getElementById("video-fallback"), videoLink: document.getElementById("video-link"), notes: document.getElementById("notes"), viewIso: document.getElementById("view-iso"), viewPerspective: document.getElementById("view-perspective"), viewFly: document.getElementById("view-fly"), focusCamera: document.getElementById("focus-camera"), loadProgress: document.getElementById("load-progress"), loadProgressLabel: document.getElementById("load-progress-label"), loadProgressPercent: document.getElementById("load-progress-percent"), loadProgressFill: document.getElementById("load-progress-fill")
+    };
+    const state = { catalog: [], filtered: [], size: "2x2", sort: "overall", renderer: null, selectedEntry: null, cardRenderers: [], resourcePackBufferPromise: null, rendererBootstrapReady: false, rendererBootstrapPromise: null, previewCycle: 0 };
+    function pushNote(text, warn = false) { const div = document.createElement("div"); div.className = "note" + (warn ? " warn" : ""); div.textContent = text; ui.notes.prepend(div); }
+    function clearNotes() { ui.notes.innerHTML = ""; }
+    function inferSize(entry) { return entry?.doorSize || (entry?.tags || []).find((tag) => /[234]x[234]/i.test(tag)) || "other"; }
+    function bounds(entry) { return entry?.sizeB ? `${entry.sizeB.width} x ${entry.sizeB.height} x ${entry.sizeB.depth}` : "-"; }
+    function fileFor(entry) { for (const format of FILE_PRIORITY) if (entry?.files?.[format]) return { format, path: entry.files[format] }; return null; }
+    function filesFor(entry) { return FILE_PRIORITY.filter((format) => entry?.files?.[format]).map((format) => ({ format, path: entry.files[format] })); }
+    function toYouTubeEmbedUrl(url) {
+      if (!url) return null;
+      try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.replace(/^www\./, "");
+        if (host === "youtu.be") {
+          const id = parsed.pathname.split("/").filter(Boolean)[0];
+          return id ? `https://www.youtube.com/embed/${id}` : null;
+        }
+        if (host === "youtube.com" || host === "m.youtube.com") {
+          if (parsed.pathname === "/watch") {
+            const id = parsed.searchParams.get("v");
+            return id ? `https://www.youtube.com/embed/${id}` : null;
+          }
+          if (parsed.pathname.startsWith("/embed/")) {
+            const id = parsed.pathname.split("/")[2];
+            return id ? `https://www.youtube.com/embed/${id}` : null;
+          }
+          if (parsed.pathname.startsWith("/shorts/")) {
+            const id = parsed.pathname.split("/")[2];
+            return id ? `https://www.youtube.com/embed/${id}` : null;
+          }
+        }
+      } catch {}
+      return null;
+    }
+    function setLink(el, href, label) { el.textContent = label; if (href) { el.href = href; el.classList.remove("disabled"); } else { el.href = "#"; el.classList.add("disabled"); } }
+    function closeFileMenus() { document.querySelectorAll(".file-menu.open").forEach((menu) => menu.classList.remove("open")); }
+    function setupFileMenu(container, trigger, dropdown, files) {
+      if (!container || !trigger || !dropdown) return;
+      dropdown.innerHTML = "";
+      if (!files.length) {
+        trigger.classList.add("disabled");
+        trigger.disabled = true;
+        container.classList.remove("open");
+        return;
+      }
+      trigger.classList.remove("disabled");
+      trigger.disabled = false;
+      files.forEach((file) => {
+        const link = document.createElement("a");
+        link.className = "file-option";
+        link.href = file.path;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.innerHTML = `<span>Download</span><span class="file-ext">.${file.format}</span>`;
+        link.addEventListener("click", () => container.classList.remove("open"));
+        dropdown.appendChild(link);
+      });
+      trigger.onclick = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const willOpen = !container.classList.contains("open");
+        closeFileMenus();
+        if (willOpen) container.classList.add("open");
+      };
+    }
+    function syncRendererBackground(renderer) {
+      const colorValue = 0x8fa8cf;
+      try {
+        if (renderer?.sceneManager?.scene && window.THREE?.Color) {
+          renderer.sceneManager.scene.background = new window.THREE.Color(colorValue);
+        }
+      } catch {}
+      try {
+        if (renderer?.renderManager?.renderer?.setClearColor) {
+          renderer.renderManager.renderer.setClearColor(colorValue, 1);
+        }
+      } catch {}
+    }
+    async function waitForRendererBootstrap() {
+      if (state.rendererBootstrapReady) return;
+      if (!state.rendererBootstrapPromise) {
+        state.rendererBootstrapPromise = (async () => {
+          if (window.__rendererBootstrapError) throw window.__rendererBootstrapError;
+          let waits = 0;
+          while (!window.__rendererBootstrapReady) {
+            if (window.__rendererBootstrapError) throw window.__rendererBootstrapError;
+            if (waits++ > 200) throw new Error("Renderer bootstrap timed out.");
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          state.rendererBootstrapReady = true;
+        })();
+      }
+      await state.rendererBootstrapPromise;
+    }
+    function setLoadProgress(percent, label) {
+      const safe = Math.max(0, Math.min(100, percent));
+      ui.loadProgress.hidden = false;
+      ui.loadProgressFill.style.width = `${safe}%`;
+      ui.loadProgressLabel.textContent = label;
+      ui.loadProgressPercent.textContent = `${Math.round(safe)}%`;
+    }
+    function hideLoadProgressSoon() {
+      setTimeout(() => {
+        ui.loadProgress.hidden = true;
+        ui.loadProgressFill.style.width = "0%";
+        ui.loadProgressLabel.textContent = "Loading 3D...";
+        ui.loadProgressPercent.textContent = "0%";
+      }, 450);
+    }
+    async function getResourcePackBuffer() {
+      if (!state.resourcePackBufferPromise) {
+        state.resourcePackBufferPromise = (async () => {
+          const response = await fetch(DEFAULT_RESOURCE_PACK_URL, { cache: "no-store" });
+          if (!response.ok) throw new Error("Resource pack HTTP " + response.status);
+          return await response.arrayBuffer();
+        })();
+      }
+      return state.resourcePackBufferPromise;
+    }
+    async function buildPackFile() {
+      const buffer = await getResourcePackBuffer();
+      return new File([buffer.slice(0)], "pack.zip", { type: "application/zip" });
+    }
+    function disposeCardRenderers() {
+      state.previewCycle += 1;
+      state.cardRenderers.forEach((renderer) => {
+        try { renderer.dispose?.(); } catch {}
+      });
+      state.cardRenderers = [];
+    }
+    function disposeMainRenderer() {
+      try { state.renderer?.dispose?.(); } catch {}
+      state.renderer = null;
+      if (ui.canvas?.id === "scene") {
+        replaceCanvas();
+      }
+    }
+    function resetCaches() {
+      try { indexedDB.deleteDatabase("ResourcePacksDB"); } catch {}
+      try {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i += 1) { const key = localStorage.key(i); if (key && (key.startsWith("atlas_") || key.toLowerCase().includes("resource") || key.toLowerCase().includes("pack"))) keys.push(key); }
+        keys.forEach((key) => localStorage.removeItem(key));
+      } catch {}
+    }
+    function replaceCanvas() { const canvas = document.createElement("canvas"); canvas.id = "scene"; ui.canvas.replaceWith(canvas); ui.canvas = canvas; return canvas; }
+    function updateHero() {
+      ui.heroSize.textContent = state.size; ui.heroCount.textContent = String(state.filtered.length); ui.heroSort.textContent = SORTS[state.sort].label;
+    }
+    function renderTabs() {
+      ui.sizeTabs.innerHTML = "";
+      SIZE_FILTERS.forEach((size) => { const btn = document.createElement("button"); btn.type = "button"; btn.className = "pill" + (size === state.size ? " active" : ""); btn.textContent = size; btn.addEventListener("click", () => { state.size = size; renderTabs(); applyFilters(); }); ui.sizeTabs.appendChild(btn); });
+    }
+    function renderSortMenu() {
+      if (!ui.sortTrigger || !ui.sortDropdown || !ui.sortMenu) return;
+      ui.sortTrigger.textContent = SORTS[state.sort].label;
+      ui.sortDropdown.innerHTML = "";
+      Object.entries(SORTS).forEach(([key, config]) => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "file-option";
+        option.innerHTML = `<span>${config.label}</span><span class="file-ext">${key === state.sort ? "Active" : "Sort"}</span>`;
+        option.addEventListener("click", () => {
+          state.sort = key;
+          ui.sortMenu.classList.remove("open");
+          renderSortMenu();
+          applyFilters();
+        });
+        ui.sortDropdown.appendChild(option);
+      });
+      ui.sortTrigger.onclick = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const willOpen = !ui.sortMenu.classList.contains("open");
+        closeFileMenus();
+        if (willOpen) ui.sortMenu.classList.add("open");
+      };
+    }
+    function renderCards() {
+      disposeCardRenderers();
+      ui.grid.innerHTML = ""; ui.empty.hidden = state.filtered.length !== 0;
+      state.filtered.forEach((entry, index) => {
+        const file = fileFor(entry); const files = filesFor(entry); const card = document.createElement("article"); card.className = "card";
+        card.innerHTML = `<div class="card-main"><div class="card-info"><div class="card-meta-top"><span class="rank">#${index + 1}</span><span class="size">${inferSize(entry)}</span></div><div class="card-heading"><h3>${entry.title}</h3><div class="card-author-row"><span>By ${entry.author || "Unknown"}</span><span class="dot" aria-hidden="true"></span><span>${entry.minecraftVersion || "version unknown"}</span></div></div><div class="card-desc"><p class="desc">${entry.description || "No description available."}</p></div><div class="preview-stats"><div class="preview-stat"><strong>Blocks</strong><span>${entry.sizeA?.value ?? "-"}</span></div><div class="preview-stat"><strong>Open</strong><span>${entry.time?.openTicks ?? "-"} seconds</span></div><div class="preview-stat"><strong>Close</strong><span>${entry.time?.closeTicks ?? "-"} seconds</span></div></div><div class="card-tags"></div><div class="actions"><a class="link-btn" href="${entry.videoUrl || "#"}" target="_blank" rel="noreferrer"${entry.videoUrl ? "" : " aria-disabled=\"true\""}>Video</a><div class="file-menu"><button class="link-btn file-trigger"${files.length ? "" : " disabled aria-disabled=\"true\""} type="button">File</button><div class="file-dropdown"></div></div></div></div><div class="preview"><div class="preview-inner"><canvas class="preview-canvas" data-preview-canvas="${entry.id}"></canvas><div class="preview-progress" data-preview-progress="${entry.id}"><div class="preview-progress-head"><div class="preview-progress-label">Loading 3D...</div><div class="preview-progress-percent">0%</div></div><div class="preview-progress-track"><div class="preview-progress-fill"></div></div></div></div><button class="preview-label" type="button" data-open="${entry.id}">View 3D</button></div></div>`;
+        const tags = card.querySelector(".card-tags"); (entry.tags || []).slice(0, 5).forEach((tag) => { const span = document.createElement("span"); span.className = "tag"; span.textContent = tag; tags.appendChild(span); });
+        setupFileMenu(card.querySelector(".file-menu"), card.querySelector(".file-trigger"), card.querySelector(".file-dropdown"), files);
+        card.querySelectorAll("[data-open]").forEach((button) => button.addEventListener("click", () => openViewer(entry)));
+        ui.grid.appendChild(card);
+      });
+      if (state.rendererBootstrapReady) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            initializeCardPreviews();
+          });
+        });
+      }
+    }
+    function applyFilters() { const sort = SORTS[state.sort]; state.filtered = state.catalog.filter((entry) => inferSize(entry) === state.size).sort((a, b) => sort.get(a) - sort.get(b) || a.title.localeCompare(b.title)); ui.summaryCount.textContent = String(state.filtered.length); ui.resultsTitle.textContent = `${state.size} Builds`; ui.resultsSubtitle.textContent = `Sorted by ${sort.label.toLowerCase()}. Open any card when you want the larger viewer.`; updateHero(); renderCards(); }
+    async function createRenderer(label) {
+      await waitForRendererBootstrap();
+      setLoadProgress(12, "Starting viewer...");
+      disposeMainRenderer(); const canvas = ui.canvas; ui.metaStatus.textContent = "Loading Viewer"; ui.metaFile.textContent = "Preparing";
+      let resolveReady; const ready = new Promise((resolve) => { resolveReady = resolve; }); let settled = false;
+      const markReady = () => { if (settled) return; settled = true; setLoadProgress(42, "Viewer engine ready..."); ui.metaStatus.textContent = "Viewer Ready"; pushNote(`Viewer engine ready for ${label}.`); resolveReady(); };
+      if (typeof window.SchematicRenderer?.SchematicRenderer !== "function") throw new Error("Official schematic-renderer export is missing.");
+      canvas.addEventListener("rendererInitialized", markReady, { once: true });
+      state.renderer = new window.SchematicRenderer.SchematicRenderer(canvas, {}, {}, { backgroundColor: 0x8fa8cf, showGrid: true, enableDragAndDrop: false, enableProgressBar: false, resourcePackOptions: { autoRebuild: false }, cameraOptions: { position: [18, 18, 18], useTightBounds: true }, callbacks: { onRendererInitialized: markReady, onSchematicRendered: () => { ui.metaStatus.textContent = "Ready"; } } });
+      await Promise.race([ready, new Promise((_, reject) => setTimeout(() => reject(new Error("Renderer initialization timed out after 10 seconds.")), 10000))]);
+      syncRendererBackground(state.renderer);
+    }
+    async function loadPack() {
+      setLoadProgress(62, "Applying textures...");
+      const packFile = await buildPackFile(); await state.renderer.cubane.loadResourcePack(packFile);
+      const loader = typeof state.renderer.cubane.getAssetLoader === "function" ? state.renderer.cubane.getAssetLoader() : null; if (typeof loader?.buildTextureAtlas === "function") await loader.buildTextureAtlas();
+      pushNote("Official resource pack applied.");
+    }
+    async function createMiniRenderer(canvas, entry) {
+      const cycle = state.previewCycle;
+      const progress = document.querySelector(`[data-preview-progress="${entry.id}"]`);
+      const setPreviewProgress = (percent, label) => {
+        if (!progress) return;
+        const fill = progress.querySelector(".preview-progress-fill");
+        const text = progress.querySelector(".preview-progress-label");
+        const number = progress.querySelector(".preview-progress-percent");
+        const safe = Math.max(0, Math.min(100, percent));
+        progress.hidden = false;
+        if (fill) fill.style.width = `${safe}%`;
+        if (text) text.textContent = label;
+        if (number) number.textContent = `${Math.round(safe)}%`;
+      };
+      const hidePreviewProgress = () => {
+        if (!progress) return;
+        setTimeout(() => { progress.hidden = true; }, 350);
+      };
+      const file = fileFor(entry);
+      if (!file) return;
+      if (typeof window.SchematicRenderer?.SchematicRenderer !== "function") return;
+      setPreviewProgress(10, "Starting viewer...");
+      const renderer = new window.SchematicRenderer.SchematicRenderer(canvas, {}, {}, {
+        backgroundColor: 0x8fa8cf,
+        showGrid: true,
+        enableDragAndDrop: false,
+        enableProgressBar: false,
+        resourcePackOptions: { autoRebuild: false },
+        cameraOptions: { position: [16, 16, 16], useTightBounds: true }
+      });
+      state.cardRenderers.push(renderer);
+      await new Promise((resolve, reject) => {
+        let settled = false;
+        const done = () => { if (settled) return; settled = true; setPreviewProgress(35, "Viewer ready..."); resolve(); };
+        canvas.addEventListener("rendererInitialized", done, { once: true });
+        setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          reject(new Error("Mini preview initialization timed out."));
+        }, 10000);
+      });
+      if (cycle !== state.previewCycle) { try { renderer.dispose?.(); } catch {} return; }
+      setPreviewProgress(58, "Applying textures...");
+      const packFile = await buildPackFile();
+      await renderer.cubane.loadResourcePack(packFile);
+      const loader = typeof renderer.cubane.getAssetLoader === "function" ? renderer.cubane.getAssetLoader() : null;
+      if (typeof loader?.buildTextureAtlas === "function") await loader.buildTextureAtlas();
+      if (cycle !== state.previewCycle) { try { renderer.dispose?.(); } catch {} return; }
+      setPreviewProgress(82, "Loading schematic...");
+      await renderer.schematicManager.loadSchematicFromURL(file.path, "card-" + entry.id);
+      if (cycle !== state.previewCycle) { try { renderer.dispose?.(); } catch {} return; }
+      renderer.cameraManager.focusOnSchematics();
+      try { renderer.cameraManager.switchCameraPreset("isometric"); } catch {}
+      syncRendererBackground(renderer);
+      setPreviewProgress(100, "Ready.");
+      hidePreviewProgress();
+    }
+    async function initializeCardPreviews() {
+      await waitForRendererBootstrap();
+      const canvases = Array.from(document.querySelectorAll("[data-preview-canvas]"));
+      for (const canvas of canvases) {
+        const entry = state.filtered.find((item) => item.id === canvas.getAttribute("data-preview-canvas"));
+        if (!entry) continue;
+        try {
+          await createMiniRenderer(canvas, entry);
+        } catch (error) {
+          console.error("Card preview failed:", error);
+        }
+      }
+    }
+    function updateModalMeta(entry, file) {
+      ui.viewerTitle.textContent = entry.title; ui.viewerSubtitle.textContent = "Large inspection view. Rotate with the mouse, zoom with the wheel, and use the camera buttons for cleaner comparison shots.";
+      ui.metaDoorSize.textContent = inferSize(entry); ui.metaAuthor.textContent = entry.author || "-"; ui.metaSizeA.textContent = entry.sizeA?.value != null ? String(entry.sizeA.value) : "-"; ui.metaSizeB.textContent = bounds(entry); ui.metaOpen.textContent = entry.time?.openTicks != null ? `${entry.time.openTicks} seconds` : "-"; ui.metaClose.textContent = entry.time?.closeTicks != null ? `${entry.time.closeTicks} seconds` : "-"; ui.metaFile.textContent = file ? "." + file.format : "No file";
+      const embedUrl = toYouTubeEmbedUrl(entry.videoUrl || "");
+      if (embedUrl) {
+        ui.videoEmbed.hidden = false;
+        ui.videoFrame.src = embedUrl;
+        ui.videoFallback.hidden = true;
+        setLink(ui.videoLink, null, "Open Video");
+      } else {
+        ui.videoEmbed.hidden = true;
+        ui.videoFrame.src = "";
+        ui.videoFallback.hidden = false;
+        setLink(ui.videoLink, entry.videoUrl || null, "Open Video");
+      }
+    }
+    async function loadEntry(entry) {
+      const file = fileFor(entry); if (!file) throw new Error("This entry does not have a supported schematic file."); clearNotes(); pushNote(`Opening ${entry.title} in the large viewer.`); updateModalMeta(entry, file);
+      await createRenderer(entry.title); await loadPack(); setLoadProgress(82, "Loading schematic..."); await state.renderer.schematicManager.loadSchematicFromURL(file.path, entry.id); state.renderer.cameraManager.focusOnSchematics(); ui.metaStatus.textContent = "Ready"; setLoadProgress(100, "Ready."); hideLoadProgressSoon(); pushNote(`Loaded entry: ${entry.title}.`);
+    }
+    async function loadLocalFile(file) {
+      clearNotes(); pushNote(`Opening local file: ${file.name}`); updateModalMeta({ title: file.name, author: "Local file", sizeA: { value: "-" }, sizeB: null, time: {}, doorSize: "-" }, { format: file.name.split(".").pop().toLowerCase(), path: "#" });
+      await createRenderer(file.name); await loadPack(); const url = URL.createObjectURL(file);
+      try { setLoadProgress(82, "Loading schematic..."); await state.renderer.schematicManager.loadSchematicFromURL(url, "localPreview"); state.renderer.cameraManager.focusOnSchematics(); ui.metaStatus.textContent = "Ready"; setLoadProgress(100, "Ready."); hideLoadProgressSoon(); pushNote(`Loaded local preview: ${file.name}.`); }
+      finally { setTimeout(() => URL.revokeObjectURL(url), 30000); }
+    }
+    async function openViewer(entry) {
+      state.selectedEntry = entry;
+      disposeCardRenderers();
+      ui.modal.classList.add("open");
+      ui.modal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+      try {
+        await loadEntry(entry);
+      } catch (error) {
+        ui.metaStatus.textContent = "Load Failed";
+        ui.loadProgress.hidden = true;
+        pushNote(`Viewer load failed: ${error.message}`, true);
+      }
+    }
+    function closeViewer() {
+      disposeMainRenderer();
+      ui.loadProgress.hidden = true;
+      ui.videoFrame.src = "";
+      ui.videoEmbed.hidden = true;
+      ui.videoFallback.hidden = false;
+      ui.modal.classList.remove("open");
+      ui.modal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+      renderCards();
+    }
+    async function loadCatalog() { const response = await fetch(CATALOG_URL, { cache: "no-store" }); if (!response.ok) throw new Error("Catalog HTTP " + response.status); const payload = await response.json(); state.catalog = Array.isArray(payload.items) ? payload.items : []; applyFilters(); }
+    function attachUi() {
+      renderTabs(); renderSortMenu(); ui.closeViewer.addEventListener("click", closeViewer); ui.modal.addEventListener("click", (event) => { if (event.target === ui.modal) closeViewer(); });
+      document.addEventListener("click", () => closeFileMenus());
+      window.addEventListener("keydown", (event) => { if (event.key === "Escape" && ui.modal.classList.contains("open")) closeViewer(); });
+      ui.viewIso.addEventListener("click", () => state.renderer && state.renderer.cameraManager.switchCameraPreset("isometric")); ui.viewPerspective.addEventListener("click", () => state.renderer && state.renderer.cameraManager.switchCameraPreset("perspective")); ui.viewFly.addEventListener("click", () => state.renderer && state.renderer.cameraManager.switchCameraPreset("perspective_fpv")); ui.focusCamera.addEventListener("click", () => state.renderer && state.renderer.cameraManager.focusOnSchematics());
+      ui.fileInput.addEventListener("change", async (event) => { const file = event.target.files && event.target.files[0]; if (!file) return; ui.modal.classList.add("open"); ui.modal.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden"; try { await loadLocalFile(file); } catch (error) { ui.metaStatus.textContent = "Load Failed"; pushNote(`Local file load failed: ${error.message}`, true); } });
+    }
+    async function initialize() {
+      resetCaches();
+      attachUi();
+      await loadCatalog();
+      pushNote("Catalog loaded. Use View 3D on any card to open the larger interactive viewer.");
+      waitForRendererBootstrap()
+        .then(() => {
+          pushNote("3D engine ready. Loading card previews...");
+          initializeCardPreviews().catch((error) => console.error("Card preview failed:", error));
+        })
+        .catch((error) => {
+          pushNote(`3D engine failed to start: ${error.message}`, true);
+        });
+    }
+    initialize().catch((error) => { pushNote(`Initialization failed: ${error.message}`, true); console.error(error); });
+  </script>
+</body>
+</html>
