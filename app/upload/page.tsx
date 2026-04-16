@@ -1,0 +1,156 @@
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { createClient } from '@/lib/supabase/server'
+import { createDoorAction } from './actions'
+
+export default async function UploadPage() {
+  const supabase = await createClient()
+  const { data } = await supabase.auth.getUser()
+  if (!data.user) redirect('/auth/login?next=/upload')
+
+  const defaultAuthor = data.user.email?.split('@')[0] ?? ''
+
+  return (
+    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
+      <nav className="flex items-center gap-2 text-xs">
+        <Link href="/" className="text-muted-foreground hover:text-foreground underline underline-offset-4">
+          ← Catalog
+        </Link>
+      </nav>
+
+      <header className="flex flex-col gap-2">
+        <p className="text-muted-foreground text-xs tracking-widest uppercase">Upload</p>
+        <h1 className="text-3xl font-semibold tracking-tight">Submit a redstone door</h1>
+        <p className="text-muted-foreground text-sm">
+          Attach at least one schematic file. All fields except file(s), title, and size are optional.
+        </p>
+      </header>
+
+      <form action={createDoorAction} className="flex flex-col gap-6">
+        <Section title="Basics">
+          <Field label="Title" name="title" required />
+          <Field label="Author" name="author" defaultValue={defaultAuthor} />
+          <Field label="Minecraft version" name="minecraft_version" placeholder="1.20.4" />
+          <div className="col-span-2 flex flex-col gap-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" name="description" rows={3} />
+          </div>
+        </Section>
+
+        <Section title="Door size">
+          <div className="col-span-2 flex items-end gap-2">
+            <div className="flex w-24 flex-col gap-2">
+              <Label htmlFor="door_width">Width</Label>
+              <Input id="door_width" name="door_width" type="number" min={1} required />
+            </div>
+            <span className="pb-2 text-lg">×</span>
+            <div className="flex w-24 flex-col gap-2">
+              <Label htmlFor="door_height">Height</Label>
+              <Input id="door_height" name="door_height" type="number" min={1} required />
+            </div>
+            <p className="text-muted-foreground pb-2 text-xs">Two numbers form the catalog size tag (e.g. 3 × 3).</p>
+          </div>
+        </Section>
+
+        <Section title="Stats">
+          <Field label="Non-air blocks" name="non_air_blocks" type="number" min={0} />
+          <div className="col-span-2 grid grid-cols-3 gap-3">
+            <Field label="Bounding W" name="bbox_w" type="number" min={0} />
+            <Field label="Bounding H" name="bbox_h" type="number" min={0} />
+            <Field label="Bounding D" name="bbox_d" type="number" min={0} />
+          </div>
+          <Field label="Open ticks" name="open_ticks" type="number" min={0} />
+          <Field label="Close ticks" name="close_ticks" type="number" min={0} />
+          <Field label="Total ticks (auto if blank)" name="total_ticks" type="number" min={0} />
+        </Section>
+
+        <Section title="Media">
+          <Field label="YouTube / video URL" name="video_url" />
+          <Field label="Tags (comma-separated)" name="tags" placeholder="flush, piston, seamless" />
+        </Section>
+
+        <Section title="Schematic files" hint="Attach at least one.">
+          <FileField label=".litematic" name="file_litematic" accept=".litematic" />
+          <FileField label=".schem" name="file_schem" accept=".schem,.schematic" />
+          <FileField label=".mcstructure" name="file_mcstructure" accept=".mcstructure" />
+        </Section>
+
+        <div className="flex items-center justify-end gap-2">
+          <Button asChild variant="outline">
+            <Link href="/">Cancel</Link>
+          </Button>
+          <Button type="submit">Publish</Button>
+        </div>
+      </form>
+    </main>
+  )
+}
+
+function Section({
+  title,
+  hint,
+  children,
+}: {
+  title: string
+  hint?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="border-border flex flex-col gap-4 border p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-xs tracking-widest uppercase">{title}</h2>
+        {hint ? <span className="text-muted-foreground text-xs">{hint}</span> : null}
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{children}</div>
+    </section>
+  )
+}
+
+function Field({
+  label,
+  name,
+  type = 'text',
+  required,
+  defaultValue,
+  placeholder,
+  min,
+}: {
+  label: string
+  name: string
+  type?: string
+  required?: boolean
+  defaultValue?: string
+  placeholder?: string
+  min?: number
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={name}>
+        {label}
+        {required ? <span className="text-destructive"> *</span> : null}
+      </Label>
+      <Input
+        id={name}
+        name={name}
+        type={type}
+        required={required}
+        defaultValue={defaultValue}
+        placeholder={placeholder}
+        min={min}
+      />
+    </div>
+  )
+}
+
+function FileField({ label, name, accept }: { label: string; name: string; accept: string }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={name}>{label}</Label>
+      <Input id={name} name={name} type="file" accept={accept} />
+    </div>
+  )
+}

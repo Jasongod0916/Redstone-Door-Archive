@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Subprojects and legacy references have their own lint setups.
+    "schematic-renderer/**",
+    "old-references/**",
   ]),
 ]);
 
