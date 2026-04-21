@@ -56,12 +56,12 @@ function installSrErrorSuppressor() {
   if (srErrorSuppressorInstalled) return
   if (typeof window === 'undefined') return
   srErrorSuppressorInstalled = true
-  const matches = (msg: string, src: string) =>
+  const matchesCamera = (msg: string, src: string) =>
     msg.includes("reading 'camera'") && src.includes('schematic-renderer')
   window.addEventListener('error', (e) => {
     const msg = e.error?.message ?? e.message ?? ''
     const src = e.filename ?? ''
-    if (matches(msg, src)) {
+    if (matchesCamera(msg, src)) {
       e.preventDefault()
       e.stopImmediatePropagation()
     }
@@ -69,10 +69,22 @@ function installSrErrorSuppressor() {
   window.addEventListener('unhandledrejection', (e) => {
     const msg = e.reason?.message ?? String(e.reason ?? '')
     const src = e.reason?.stack ?? ''
-    if (matches(msg, src)) {
+    if (matchesCamera(msg, src)) {
       e.preventDefault()
     }
   })
+
+  // schematic-renderer calls `console.error('FFmpeg not found')` from its
+  // dispose path before throwing, and Next's dev overlay captures every
+  // console.error call. Filter that one exact message (we already swallow
+  // the thrown Error via try/catch in safeDispose).
+  const originalConsoleError = console.error.bind(console)
+  console.error = ((...args: unknown[]) => {
+    if (args.some((a) => typeof a === 'string' && a === 'FFmpeg not found')) {
+      return
+    }
+    originalConsoleError(...args)
+  }) as typeof console.error
 }
 
 function ensureResourcePack(): Promise<ArrayBuffer> {
