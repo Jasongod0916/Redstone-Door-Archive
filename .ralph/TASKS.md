@@ -68,7 +68,7 @@
 - 改 `FileField` 為 drop zone（可多檔，自動依副檔名分派到對應格式槽位）
 - 拖進來立刻在前端 parse 一次給 preview（可選，先不做也可）
 
-### [ ] T5. 首頁加入顯著的「上傳」入口 + 未登入時的 CTA
+### [x] T5. 首頁加入顯著的「上傳」入口 + 未登入時的 CTA
 - 登入使用者：右上有「＋ Upload」按鈕
 - 未登入：catalog 上方顯示一行「分享你的作品 → 登入」的 soft CTA
 
@@ -135,3 +135,4 @@
 - T6 done 2026-04-21: self-hosted 3D deps via `bun run setup:vendor` (scripts/setup-vendor.sh). Downloads three@0.159.0 UMD (668KB) + schematic-renderer@1.1.23 UMD (29.5MB) to public/vendor/, gitignored. Viewer defaults + .env.local.example point at /vendor/*. Fixes two latent bugs: three@0.181.2 has no UMD build, and sr@1.1.24 never existed on npm. Added ESLint ignore for public/vendor/**.
 - T7+T8+T10 done 2026-04-21: SchematicViewer now (a) lazy-inits via IntersectionObserver with 256px rootMargin — scripts only load when canvas is near viewport, (b) caps devicePixelRatio at 1.5 by probing the Three renderer via narrow-type helper, (c) defaults to backgroundColor 0x111111 + showGrid false. Codex rescue returned empty output twice so hand-implemented with React-19-safe queueMicrotask pattern. T8's quality-toggle UI deferred. Lint+tsc green.
 - T9 done 2026-04-21: view page emits `<link rel="preload" as="script">` for both vendor scripts so they're in-flight before IntersectionObserver fires. Loading skeleton in schematic-viewer-lazy now uses shadcn Skeleton (absolute positioned) behind the "Loading viewer…" caption. Lint+tsc green.
+- T5 done 2026-04-21: homepage already had a signed-in Upload button (top-right); added a soft CTA strip above filters for signed-out users linking to /auth/login?next=/upload. Lint+tsc green.
