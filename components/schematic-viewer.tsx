@@ -289,7 +289,14 @@ export default function SchematicViewer({
 
     return () => {
       cancelled = true
-      localInstance?.dispose?.()
+      // schematic-renderer's dispose() throws "FFmpeg not found" when the
+      // (unused) FFmpeg subsystem was never initialized. Swallow — the 3D
+      // scene is already torn down by this point.
+      try {
+        localInstance?.dispose?.()
+      } catch {
+        // ignore
+      }
       if (rendererRef.current === localInstance) rendererRef.current = null
     }
   }, [inView, threeReady, rendererReady, schematicId, schematicUrl, quality])
