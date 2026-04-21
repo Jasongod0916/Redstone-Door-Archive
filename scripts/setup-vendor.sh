@@ -34,4 +34,18 @@ download_if_missing() {
 echo "Hydrating $VENDOR_DIR ..."
 download_if_missing "$VENDOR_DIR/three.module.min.js"       "$THREE_URL"
 download_if_missing "$VENDOR_DIR/schematic-renderer.umd.js" "$SR_URL"
+
+# Copy the resource pack (textures + models) from the vendored source tree.
+# schematic-renderer's WASM tries to rebuild a virtual filesystem from this
+# zip; without it the viewer throws "無法新增檔案系統：<illegal path>".
+PACK_SRC="schematic-renderer/test/public/pack.zip"
+if [ -s "$VENDOR_DIR/pack.zip" ]; then
+  echo "  ok   $VENDOR_DIR/pack.zip (cached)"
+elif [ -s "$PACK_SRC" ]; then
+  cp "$PACK_SRC" "$VENDOR_DIR/pack.zip"
+  echo "  ok   $VENDOR_DIR/pack.zip ($(wc -c < "$VENDOR_DIR/pack.zip") bytes, copied from $PACK_SRC)"
+else
+  echo "  warn pack.zip missing — viewer will fail until $PACK_SRC is present"
+fi
+
 echo "Done. Vendor assets ready."

@@ -3,12 +3,27 @@
 import Script from 'next/script'
 import { useEffect, useRef, useState } from 'react'
 
+type SchematicRendererInstance = {
+  dispose?: () => void
+  cubane?: {
+    loadResourcePack: (pack: File) => Promise<void>
+    getAssetLoader?: () => { buildTextureAtlas?: () => Promise<void> } | null
+  }
+  schematicManager?: {
+    loadSchematicFromURL: (url: string, id: string) => Promise<void>
+  }
+  cameraManager?: {
+    focusOnSchematics?: () => void
+    switchCameraPreset?: (preset: string) => void
+  }
+}
+
 type SchematicRendererCtor = new (
   canvas: HTMLCanvasElement,
   schematics: Record<string, () => Promise<ArrayBuffer>>,
   resourcePacks: Record<string, () => Promise<Blob>>,
   options: Record<string, unknown>,
-) => { dispose?: () => void }
+) => SchematicRendererInstance
 
 declare global {
   interface Window {
@@ -25,8 +40,25 @@ const THREE_SRC = process.env.NEXT_PUBLIC_THREE_URL ?? '/vendor/three.module.min
 
 const RENDERER_SRC =
   process.env.NEXT_PUBLIC_SCHEMATIC_RENDERER_URL ?? '/vendor/schematic-renderer.umd.js'
+const RESOURCE_PACK_URL = process.env.NEXT_PUBLIC_RESOURCE_PACK_URL ?? '/vendor/pack.zip'
 
 let threeLoadPromise: Promise<void> | null = null
+let resourcePackPromise: Promise<ArrayBuffer> | null = null
+
+function ensureResourcePack(): Promise<ArrayBuffer> {
+  if (!resourcePackPromise) {
+    resourcePackPromise = fetch(RESOURCE_PACK_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Resource pack HTTP ${res.status}`)
+        return res.arrayBuffer()
+      })
+      .catch((err) => {
+        resourcePackPromise = null
+        throw err
+      })
+  }
+  return resourcePackPromise
+}
 
 function ensureThreeLoaded(): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve()
@@ -123,7 +155,7 @@ export default function SchematicViewer({
   emptyLabel = 'Unable to load schematic.',
 }: SchematicViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const rendererRef = useRef<{ dispose?: () => void } | null>(null)
+  const rendererRef = useRef<SchematicRendererInstance | null>(null)
   const [inView, setInView] = useState(false)
   const [threeReady, setThreeReady] = useState(false)
   const [rendererReady, setRendererReady] = useState(false)
@@ -169,7 +201,8 @@ export default function SchematicViewer({
 
   useEffect(() => {
     if (!inView || !threeReady || !rendererReady) return
-    if (!canvasRef.current) return
+    const canvas = canvasRef.current
+    if (!canvas) return
 
     const Ctor = window.SchematicRenderer?.SchematicRenderer
     if (!Ctor) {
@@ -178,47 +211,86 @@ export default function SchematicViewer({
     }
 
     let cancelled = false
-    queueMicrotask(() => {
-      if (cancelled) return
+    let localInstance: SchematicRendererInstance | null = null
+
+    const run = async () => {
       try {
-        const instance = new Ctor(
-          canvasRef.current!,
-          {
-            [schematicId]: async () => {
-              const res = await fetch(schematicUrl)
-              if (!res.ok) throw new Error(`Fetch ${schematicUrl}: ${res.status}`)
-              return res.arrayBuffer()
+        // Construct the renderer empty first (mirrors the pattern in
+        // old-references/door-catalog-viewer.html). Loading the schematic
+        // or resource pack in the constructor is unreliable across versions
+        // of schematic-renderer; explicit calls after `rendererInitialized`
+        // are the supported path.
+        const ready = new Promise<void>((resolve, reject) => {
+          let settled = false
+          const done = () => {
+            if (settled) return
+            settled = true
+            resolve()
+          }
+          canvas.addEventListener('rendererInitialized', done, { once: true })
+          setTimeout(() => {
+            if (settled) return
+            settled = true
+            reject(new Error('Renderer init timed out after 15s.'))
+          }, 15_000)
+        })
+
+        const instance = new Ctor(canvas, {}, {}, {
+          backgroundColor: 0x111111,
+          showGrid: false,
+          enableDragAndDrop: false,
+          enableProgressBar: false,
+          resourcePackOptions: { autoRebuild: false },
+          cameraOptions: { position: [18, 18, 18], useTightBounds: true },
+          callbacks: {
+            onRendererInitialized: () => {
+              canvas.dispatchEvent(new Event('rendererInitialized'))
             },
           },
-          {},
-          {
-            backgroundColor: 0x111111,
-            showGrid: false,
-            enableDragAndDrop: false,
-            enableProgressBar: false,
-            cameraOptions: { position: [18, 18, 18], useTightBounds: true },
-          },
-        )
-        if (cancelled) {
-          instance.dispose?.()
-          return
-        }
+        })
+        localInstance = instance
         rendererRef.current = instance
+
         const cap = DPR_BY_QUALITY[quality]
         const ratio = Math.min(
           typeof window !== 'undefined' ? window.devicePixelRatio : 1,
           cap,
         )
         applyPixelRatioCap(instance, ratio)
+
+        await ready
+        if (cancelled) return
+
+        // Resource pack — required for the WASM texture atlas. Without it the
+        // viewer throws "<illegal path>" while building its virtual FS.
+        const packBuffer = await ensureResourcePack()
+        if (cancelled) return
+        const packFile = new File([packBuffer.slice(0)], 'pack.zip', {
+          type: 'application/zip',
+        })
+        await instance.cubane?.loadResourcePack(packFile)
+        const loader = instance.cubane?.getAssetLoader?.()
+        if (loader && typeof loader.buildTextureAtlas === 'function') {
+          await loader.buildTextureAtlas()
+        }
+        if (cancelled) return
+
+        // Finally, fetch and load the actual schematic.
+        await instance.schematicManager?.loadSchematicFromURL(schematicUrl, schematicId)
+        if (cancelled) return
+        instance.cameraManager?.focusOnSchematics?.()
       } catch (err) {
+        if (cancelled) return
         setError(err instanceof Error ? err.message : String(err))
       }
-    })
+    }
+
+    queueMicrotask(run)
 
     return () => {
       cancelled = true
-      rendererRef.current?.dispose?.()
-      rendererRef.current = null
+      localInstance?.dispose?.()
+      if (rendererRef.current === localInstance) rendererRef.current = null
     }
   }, [inView, threeReady, rendererReady, schematicId, schematicUrl, quality])
 
