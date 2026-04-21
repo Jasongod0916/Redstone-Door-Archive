@@ -33,12 +33,12 @@ export default async function UploadPage() {
       <form action={createDoorAction} className="flex flex-col gap-6">
         <Section title="Basics">
           <Field label="Title" name="title" required />
-          <Field label="Author" name="author" defaultValue={defaultAuthor} />
-          <Field label="Minecraft version" name="minecraft_version" placeholder="1.20.4" />
-          <div className="col-span-2 flex flex-col gap-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea id="description" name="description" rows={3} />
-          </div>
+        </Section>
+
+        <Section title="Schematic files" hint="Attach at least one.">
+          <FileField label=".litematic" name="file_litematic" accept=".litematic" />
+          <FileField label=".schem" name="file_schem" accept=".schem,.schematic" />
+          <FileField label=".mcstructure" name="file_mcstructure" accept=".mcstructure" />
         </Section>
 
         <Section title="Door size">
@@ -56,28 +56,27 @@ export default async function UploadPage() {
           </div>
         </Section>
 
-        <Section title="Stats">
-          <Field label="Non-air blocks" name="non_air_blocks" type="number" min={0} />
-          <div className="col-span-2 grid grid-cols-3 gap-3">
-            <Field label="Bounding W" name="bbox_w" type="number" min={0} />
-            <Field label="Bounding H" name="bbox_h" type="number" min={0} />
-            <Field label="Bounding D" name="bbox_d" type="number" min={0} />
+        <details className="border-border flex flex-col gap-4 border p-4">
+          <summary className="text-xs tracking-widest uppercase cursor-pointer">Advanced (optional)</summary>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Field label="Author" name="author" defaultValue={defaultAuthor} />
+            <Field label="Minecraft version" name="minecraft_version" placeholder="1.20.4" />
+            <div className="col-span-2 flex flex-col gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" name="description" rows={3} />
+            </div>
+            <Field label="Block count" name="block_count" type="number" min={0} />
+            <div className="col-span-2 grid grid-cols-3 gap-3">
+              <Field label="Bounding W" name="bounds_width" type="number" min={0} />
+              <Field label="Bounding H" name="bounds_height" type="number" min={0} />
+              <Field label="Bounding D" name="bounds_depth" type="number" min={0} />
+            </div>
+            <Field label="Open ticks" name="open_ticks" type="number" min={0} />
+            <Field label="Close ticks" name="close_ticks" type="number" min={0} />
+            <Field label="YouTube / video URL" name="video_url" />
+            <Field label="Tags (comma-separated)" name="tags" placeholder="flush, piston, seamless" />
           </div>
-          <Field label="Open ticks" name="open_ticks" type="number" min={0} />
-          <Field label="Close ticks" name="close_ticks" type="number" min={0} />
-          <Field label="Total ticks (auto if blank)" name="total_ticks" type="number" min={0} />
-        </Section>
-
-        <Section title="Media">
-          <Field label="YouTube / video URL" name="video_url" />
-          <Field label="Tags (comma-separated)" name="tags" placeholder="flush, piston, seamless" />
-        </Section>
-
-        <Section title="Schematic files" hint="Attach at least one.">
-          <FileField label=".litematic" name="file_litematic" accept=".litematic" />
-          <FileField label=".schem" name="file_schem" accept=".schem,.schematic" />
-          <FileField label=".mcstructure" name="file_mcstructure" accept=".mcstructure" />
-        </Section>
+        </details>
 
         <div className="flex items-center justify-end gap-2">
           <Button asChild variant="outline">

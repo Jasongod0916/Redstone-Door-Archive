@@ -44,7 +44,7 @@
   - 保留 doors 的 RLS 不動
 - 跑 `bun run lint` / `bunx tsc --noEmit` 不會驗 SQL — 之後本地 `supabase db push` 再驗
 
-### [ ] T2. 砍掉上傳表單的必填欄位，只留「檔案 + 標題 + 尺寸」
+### [x] T2. 砍掉上傳表單的必填欄位，只留「檔案 + 標題 + 尺寸」
 - `app/upload/page.tsx`：只保留 Title、Door width、Door height、至少一個檔案欄位。其它（author、MC version、description、stats、video、tags）收進可折疊的「Advanced（optional）」 `<details>`
 - `actions.ts`：對應調整 — 沒填的 stats 全部允許 null（DB 已經允許）
 - Author 預設值用 email 前綴（已經這樣做了），保留
@@ -121,3 +121,4 @@
 - T1 done 2026-04-21: kept WIP refactor of actions.ts, removed admin_users gate (never existed in migration). Lint+tsc green. Filed T1a/T1b/T1c for WIP breakage (storage path / owner_id / migration alignment).
 - T1a+T1b done 2026-04-21: storage path now `${user.id}/${doorId}/${fmt}.${ext}` (RLS compliant); doors insert now includes `owner_id: user.id`. Lint+tsc green.
 - T1c done 2026-04-21: added migration 0002 with slug/door_size/block_count/bounds_*/thumbnail_url/sort_order columns (nullable additions, no drops), door_files table + RLS, and default gen_random_uuid()::text for doors.id. Idempotent. Not yet pushed to DB.
+- T2 done 2026-04-21: upload form now shows only Title + Door size + file inputs above the fold; author/MC version/description/stats/video/tags collapsed into `<details>` "Advanced (optional)". Also propagates the WIP column renames (non_air_blocks→block_count, bbox_*→bounds_*) to match migration 0002. Lint+tsc green.
