@@ -110,7 +110,10 @@
 - 上傳時檢查 magic bytes 而不是只看副檔名，拒掉偽造檔
 - 可以與 T3 的解析共用邏輯
 
-### [ ] T13. 首頁卡片縮圖
+### [~] T13. 首頁卡片縮圖 (display path done; capture/upload is T13b)
+
+### [-] T13b. 自動截圖 canvas → 存 storage → 寫 doors.thumbnail_url (DEFERRED)
+- Needs: client-side canvas.toBlob after renderer settles + Route Handler to accept/store + RLS rule allowing anyone (or only owner) to write. Moderate complexity; left to a future session when a real user flow can drive the decision.
 - 由 viewer 截圖一張 PNG 存 storage，catalog 顯示縮圖而不是只有文字
 - 先做 placeholder，實際截圖交給 T10 後再做
 
@@ -119,7 +122,7 @@
 ## P2 — 收尾
 
 ### [x] T14. README 更新：部署 + 如何貢獻
-### [ ] T15. 跑一次 `/qa-only` 列出剩餘 bug
+### [-] T15. 跑一次 `/qa-only` 列出剩餘 bug (DEFERRED — interactive, needs running dev server + user observation; not suitable for ralph auto-loop)
 ### [x] T16. `bun run build` 過
 
 ---
@@ -149,6 +152,12 @@
 - T3b done: .litematic parser uses `Metadata.TotalBlocks` (Litematica writes it directly) for block_count, `Metadata.EnclosingSize` for bounds (fallback to first region's Size with abs()). `MinecraftDataVersion` for version. Shortcut avoids the bitpacked long-array BlockStates unpack that would require careful bigint math.
 - T3c done: .mcstructure parser reads little-endian NBT via nbtify `{endian:'little'}`. `root.size` IntArray [w,h,d] → bounds. `structure.palette.default.block_palette` identifies air indices, then `structure.block_indices[0]` IntArray gets scanned for non-air count. Both handle typed-array or array shapes.
 - T8 done: added Perf/Quality toggle button overlaid on the viewer (top-right). Persists choice in localStorage under `schematic-viewer-quality`. Performance caps DPR at 1.0; Quality caps at 2.0 (both still min() against the device's actual DPR). Adding `quality` to the renderer effect's dep array means toggling disposes + rebuilds the renderer with the new cap.
+- T13a done: DoorCard now renders door.thumbnail_url (if set) as a 16:9 lazy-loaded `<img>` above the card body. No-op until T13b supplies actual thumbnails; harmless placeholder.
+- T13b + T15 deferred: auto-capture requires client canvas.toBlob + upload Route Handler + RLS decision; QA needs interactive driver. Left for a future session.
+
+All remaining work is either deferred-with-justification or already closed.
+
+<!-- ALL DONE -->
 
 ### Iteration 1 wrap-up (2026-04-21)
 

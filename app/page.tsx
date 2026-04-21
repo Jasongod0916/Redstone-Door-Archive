@@ -178,6 +178,21 @@ function DoorCard({ door }: { door: Door }) {
       {/* Red accent bar */}
       <div className="h-0.5 w-full bg-primary opacity-60 group-hover:opacity-100 transition-opacity" />
 
+      {door.thumbnail_url ? (
+        <Link
+          href={`/view/${door.id}`}
+          className="bg-muted relative block aspect-video w-full overflow-hidden border-b border-border"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={door.thumbnail_url}
+            alt={`${door.title} preview`}
+            loading="lazy"
+            className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
+          />
+        </Link>
+      ) : null}
+
       <div className="flex flex-col gap-3 p-4">
         {/* Meta */}
         <div className="flex flex-wrap items-center gap-2">
