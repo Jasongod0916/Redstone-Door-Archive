@@ -157,8 +157,6 @@
 
 All remaining work is either deferred-with-justification or already closed.
 
-<!-- ALL DONE -->
-
 ### Iteration 1 wrap-up (2026-04-21)
 
 **P0 goals fully met:**
@@ -176,3 +174,7 @@ All remaining work is either deferred-with-justification or already closed.
 
 13 commits landed this iteration. `bun run build` / `bun run lint` /
 `bunx tsc --noEmit` all green.
+
+---
+
+<!-- ALL DONE -->
