@@ -4,9 +4,17 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import SchematicViewer from '@/components/schematic-viewer-lazy'
 import { getDoor } from '@/lib/doors/queries'
-import { doorSizeLabel } from '@/lib/types/door'
 
 type Params = Promise<{ id: string }>
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const THREE_SRC = process.env.NEXT_PUBLIC_THREE_URL ?? '/vendor/three.min.js'
+const RENDERER_SRC =
+  process.env.NEXT_PUBLIC_SCHEMATIC_RENDERER_URL ?? '/vendor/schematic-renderer.umd.js'
+
+function schematicPublicUrl(storagePath: string): string {
+  return `${SUPABASE_URL}/storage/v1/object/public/schematics/${storagePath}`
+}
 
 function youtubeEmbed(url: string | null): string | null {
   if (!url) return null
@@ -31,91 +39,150 @@ export default async function DoorDetailPage({ params }: { params: Params }) {
   const door = await getDoor(id)
   if (!door) notFound()
 
-  const schematicUrl =
-    door.files.litematic ?? door.files.schem ?? door.files.mcstructure ?? null
+  const preferredFile =
+    door.door_files.find((f) => f.format === 'litematic') ??
+    door.door_files.find((f) => f.format === 'schem') ??
+    door.door_files.find((f) => f.format === 'mcstructure') ??
+    door.door_files[0] ??
+    null
 
+  const schematicUrl = preferredFile ? schematicPublicUrl(preferredFile.storage_path) : null
   const embedSrc = youtubeEmbed(door.video_url)
 
   return (
     <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-6">
-      <nav className="flex items-center gap-2 text-xs">
-        <Link href="/" className="text-muted-foreground hover:text-foreground underline underline-offset-4">
+      {/* Preload the 3D viewer bundles so they're in-flight before IntersectionObserver fires. */}
+      <link rel="preload" as="script" href={THREE_SRC} />
+      <link rel="preload" as="script" href={RENDERER_SRC} />
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-xs pt-2">
+        <Link
+          href="/"
+          className="text-muted-foreground hover:text-primary transition-colors"
+        >
           ← Catalog
         </Link>
+        <span className="text-border">/</span>
+        <span className="text-foreground truncate max-w-xs">{door.title}</span>
       </nav>
 
+      {/* Header */}
       <header className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 bg-primary glow-red" />
+          <span className="text-primary text-xs tracking-widest uppercase">{door.door_size} door</span>
+        </div>
+        <h1 className="text-4xl font-semibold tracking-tight leading-tight">{door.title}</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{doorSizeLabel(door.door_width, door.door_height)}</Badge>
-          {door.minecraft_version ? <Badge variant="outline">{door.minecraft_version}</Badge> : null}
+          <span className="text-muted-foreground text-sm">by {door.author}</span>
+          {door.minecraft_version ? (
+            <Badge variant="outline" className="text-xs">{door.minecraft_version}</Badge>
+          ) : null}
           {door.tags.map((t) => (
-            <Badge key={t} variant="outline" className="font-normal">
-              {t}
-            </Badge>
+            <Badge key={t} variant="outline" className="text-xs font-normal">{t}</Badge>
           ))}
         </div>
-        <h1 className="text-4xl font-semibold tracking-tight">{door.title}</h1>
-        <p className="text-muted-foreground text-sm">by {door.author}</p>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="border-border flex min-h-[560px] flex-col border">
+      {/* Main content */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* 3D Viewer */}
+        <section className="border border-border bg-card overflow-hidden">
+          <div className="border-b border-border px-4 py-2 flex items-center gap-2">
+            <div className="h-1.5 w-1.5 bg-primary glow-red" />
+            <span className="text-xs tracking-widest uppercase text-muted-foreground">3D Preview</span>
+          </div>
           {schematicUrl ? (
-            <div className="relative h-[560px] w-full">
-              <SchematicViewer schematicUrl={schematicUrl} schematicId={door.id} />
+            <div className="h-[520px] w-full">
+              <SchematicViewer
+                schematicUrl={schematicUrl}
+                schematicId={door.id}
+                className="h-full w-full"
+              />
             </div>
           ) : (
-            <div className="text-muted-foreground flex h-[560px] w-full items-center justify-center p-8 text-center text-sm">
+            <div className="text-muted-foreground flex h-[520px] w-full items-center justify-center text-sm">
               No schematic file attached.
             </div>
           )}
         </section>
 
+        {/* Sidebar */}
         <aside className="flex flex-col gap-4">
           {door.description ? (
-            <p className="text-sm leading-relaxed">{door.description}</p>
+            <div className="border border-border bg-card p-4">
+              <p className="text-muted-foreground text-xs tracking-widest uppercase mb-2">About</p>
+              <p className="text-sm leading-relaxed">{door.description}</p>
+            </div>
           ) : null}
 
-          <div className="border-border grid grid-cols-2 border">
-            <Metric label="Non-air blocks" value={door.non_air_blocks ?? '—'} />
-            <Metric label="Bounding box" value={`${door.bbox_w ?? '—'} × ${door.bbox_h ?? '—'} × ${door.bbox_d ?? '—'}`} />
-            <Metric label="Open ticks" value={door.open_ticks ?? '—'} />
-            <Metric label="Close ticks" value={door.close_ticks ?? '—'} />
-            <Metric label="Total ticks" value={door.total_ticks ?? '—'} span={2} />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <p className="text-muted-foreground text-xs tracking-widest uppercase">Files</p>
-            <div className="flex flex-wrap gap-2">
-              {(['litematic', 'schem', 'mcstructure'] as const).map((key) => {
-                const url = door.files[key]
-                if (!url) return null
-                return (
-                  <Button key={key} asChild variant="outline" size="sm">
-                    <a href={url} download>
-                      .{key}
-                    </a>
-                  </Button>
-                )
-              })}
-              {Object.values(door.files).every((v) => !v) ? (
-                <span className="text-muted-foreground text-xs">No downloads available.</span>
-              ) : null}
+          {/* Stats */}
+          <div className="border border-border bg-card">
+            <div className="border-b border-border px-4 py-2">
+              <span className="text-xs tracking-widest uppercase text-muted-foreground">Stats</span>
             </div>
-          </div>
-
-          {embedSrc ? (
-            <div className="aspect-video w-full overflow-hidden border border-border">
-              <iframe
-                src={embedSrc}
-                title={`${door.title} video`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="h-full w-full"
+            <div className="grid grid-cols-2">
+              <Metric label="Blocks" value={door.block_count ?? '—'} />
+              <Metric
+                label="Bounds"
+                value={
+                  door.bounds_width
+                    ? `${door.bounds_width}×${door.bounds_height}×${door.bounds_depth}`
+                    : '—'
+                }
+              />
+              <Metric label="Open" value={door.open_ticks != null ? `${door.open_ticks}t` : '—'} />
+              <Metric label="Close" value={door.close_ticks != null ? `${door.close_ticks}t` : '—'} />
+              <Metric
+                label="Total"
+                value={door.total_ticks != null ? `${door.total_ticks}t` : '—'}
+                span={2}
+                highlight
               />
             </div>
+          </div>
+
+          {/* Downloads */}
+          <div className="border border-border bg-card p-4 flex flex-col gap-3">
+            <p className="text-muted-foreground text-xs tracking-widest uppercase">Downloads</p>
+            {door.door_files.length === 0 ? (
+              <p className="text-muted-foreground text-xs">No files available.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {door.door_files.map((f) => (
+                  <Button key={f.id} asChild variant="outline" size="sm">
+                    <a href={schematicPublicUrl(f.storage_path)} download={f.file_name}>
+                      .{f.format}
+                    </a>
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Video */}
+          {embedSrc ? (
+            <div className="border border-border bg-card overflow-hidden">
+              <div className="border-b border-border px-4 py-2">
+                <span className="text-xs tracking-widest uppercase text-muted-foreground">Video</span>
+              </div>
+              <div className="aspect-video w-full">
+                <iframe
+                  src={embedSrc}
+                  title={`${door.title} video`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="h-full w-full"
+                />
+              </div>
+            </div>
           ) : door.video_url ? (
-            <a href={door.video_url} className="text-sm underline underline-offset-4" target="_blank" rel="noreferrer">
+            <a
+              href={door.video_url}
+              className="text-sm text-primary underline underline-offset-4 hover:opacity-80 transition-opacity"
+              target="_blank"
+              rel="noreferrer"
+            >
               Watch video →
             </a>
           ) : null}
@@ -125,15 +192,27 @@ export default async function DoorDetailPage({ params }: { params: Params }) {
   )
 }
 
-function Metric({ label, value, span = 1 }: { label: string; value: React.ReactNode; span?: 1 | 2 }) {
+function Metric({
+  label,
+  value,
+  span = 1,
+  highlight,
+}: {
+  label: string
+  value: React.ReactNode
+  span?: 1 | 2
+  highlight?: boolean
+}) {
   return (
     <div
-      className={`border-border flex flex-col gap-1 border-b border-r p-3 last:border-r-0 ${
+      className={`flex flex-col gap-1 border-b border-r border-border p-3 last:border-r-0 ${
         span === 2 ? 'col-span-2 border-r-0' : ''
-      }`}
+      } ${highlight ? 'bg-primary/5' : ''}`}
     >
       <span className="text-muted-foreground text-xs tracking-widest uppercase">{label}</span>
-      <span className="text-sm font-medium">{value}</span>
+      <span className={`text-sm font-semibold tabular-nums ${highlight ? 'text-primary' : ''}`}>
+        {value}
+      </span>
     </div>
   )
 }

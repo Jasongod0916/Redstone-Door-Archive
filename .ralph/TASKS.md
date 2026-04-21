@@ -90,7 +90,7 @@
 - 在 renderer options 加 `pixelRatio: Math.min(window.devicePixelRatio, 1.5)`（先查 schematic-renderer API 有沒有吃這個；沒有就改去碰它內部的 Three.js renderer）
 - 加一個切換按鈕：Performance / Quality 兩段
 
-### [ ] T9. 預載提示 + 骨架載入態
+### [x] T9. 預載提示 + 骨架載入態
 - `app/view/[id]/page.tsx`：`<link rel="preload" as="script" href={THREE_SRC}>` 與 renderer 同理
 - 載入時顯示骨架（shadcn Skeleton），而不是空 canvas
 
@@ -134,3 +134,4 @@
 - T3 partial 2026-04-21: added nbtify dep + lib/schematic/parse.ts. Sponge .schem parser extracts bounds_width/height/depth + non-air block_count via varint decode + palette air-exclusion. litematic/mcstructure/nbt/schematic return {} stubs. Wired into actions.ts as post-upload doors UPDATE (fills only null fields, silent on failure). Lint+tsc green.
 - T6 done 2026-04-21: self-hosted 3D deps via `bun run setup:vendor` (scripts/setup-vendor.sh). Downloads three@0.159.0 UMD (668KB) + schematic-renderer@1.1.23 UMD (29.5MB) to public/vendor/, gitignored. Viewer defaults + .env.local.example point at /vendor/*. Fixes two latent bugs: three@0.181.2 has no UMD build, and sr@1.1.24 never existed on npm. Added ESLint ignore for public/vendor/**.
 - T7+T8+T10 done 2026-04-21: SchematicViewer now (a) lazy-inits via IntersectionObserver with 256px rootMargin — scripts only load when canvas is near viewport, (b) caps devicePixelRatio at 1.5 by probing the Three renderer via narrow-type helper, (c) defaults to backgroundColor 0x111111 + showGrid false. Codex rescue returned empty output twice so hand-implemented with React-19-safe queueMicrotask pattern. T8's quality-toggle UI deferred. Lint+tsc green.
+- T9 done 2026-04-21: view page emits `<link rel="preload" as="script">` for both vendor scripts so they're in-flight before IntersectionObserver fires. Loading skeleton in schematic-viewer-lazy now uses shadcn Skeleton (absolute positioned) behind the "Loading viewer…" caption. Lint+tsc green.
