@@ -55,12 +55,12 @@
 - 如果解析失敗：不 abort，只 log warning，讓手填值或 null 通過
 - 這樣使用者只要丟檔案 + 標題 + 尺寸就好
 
-### [ ] T3b. 補 `.litematic` 解析器
+### [x] T3b. 補 `.litematic` 解析器
 - 目前 `lib/schematic/parse.ts` 對 litematic 回傳 `{}` (stub)
 - litematic = gzip NBT，根有 `Regions.<name>.Size` (xyz compound)、`BlockStatePalette` (list)、`BlockStates` (long array, packed)
 - Non-air block count = 對 BlockStates 做 bitpack decode、查 palette、排除 air variants
 
-### [ ] T3c. 補 `.mcstructure` 解析器（Bedrock edition）
+### [x] T3c. 補 `.mcstructure` 解析器（Bedrock edition）
 - NBT，用 little-endian；根有 `size` int array [w, h, d]、`structure.block_indices` list
 - Block palette 裡的 `name` 匹配 'minecraft:air' 系列排除
 
@@ -143,6 +143,11 @@
 - T12 done 2026-04-21: added isLikelyValidFormat() magic-byte check in actions.ts — Sponge .schem/.schematic/.litematic must start with gzip magic 0x1f 0x8b, .mcstructure must start with NBT compound tag 0x0a. Rejects mis-declared or corrupt files before they reach storage. Lint+tsc green.
 
 ---
+
+### Iteration 2 (2026-04-21)
+
+- T3b done: .litematic parser uses `Metadata.TotalBlocks` (Litematica writes it directly) for block_count, `Metadata.EnclosingSize` for bounds (fallback to first region's Size with abs()). `MinecraftDataVersion` for version. Shortcut avoids the bitpacked long-array BlockStates unpack that would require careful bigint math.
+- T3c done: .mcstructure parser reads little-endian NBT via nbtify `{endian:'little'}`. `root.size` IntArray [w,h,d] → bounds. `structure.palette.default.block_palette` identifies air indices, then `structure.block_indices[0]` IntArray gets scanned for non-air count. Both handle typed-array or array shapes.
 
 ### Iteration 1 wrap-up (2026-04-21)
 

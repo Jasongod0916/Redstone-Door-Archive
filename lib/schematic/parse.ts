@@ -158,28 +158,131 @@ async function parseSpongeSchematic(data: ArrayBuffer | Uint8Array | Blob): Prom
   }
 }
 
+async function parseLitematic(data: ArrayBuffer | Uint8Array | Blob): Promise<ParsedSchematicMetadata> {
+  const parsed = await read(data)
+  const root = asCompound(parsed.data)
+  if (!root) return {}
+
+  const metadata = asCompound(root.Metadata)
+  const regions = asCompound(root.Regions)
+
+  // Metadata.TotalBlocks is the non-air block count as Litematica saves it.
+  const totalBlocks = metadata ? asNumber(metadata.TotalBlocks) : null
+
+  // Prefer Metadata.EnclosingSize; fall back to abs() of first region's Size.
+  let width: number | null = null
+  let height: number | null = null
+  let depth: number | null = null
+  if (metadata) {
+    const enclosing = asCompound(metadata.EnclosingSize)
+    if (enclosing) {
+      width = asNumber(enclosing.x)
+      height = asNumber(enclosing.y)
+      depth = asNumber(enclosing.z)
+    }
+  }
+  if ((width === null || height === null || depth === null) && regions) {
+    const firstRegionKey = Object.keys(regions)[0]
+    const region = firstRegionKey ? asCompound(regions[firstRegionKey]) : null
+    const size = region ? asCompound(region.Size) : null
+    if (size) {
+      width = width ?? asNumber(size.x)
+      height = height ?? asNumber(size.y)
+      depth = depth ?? asNumber(size.z)
+    }
+  }
+
+  const dataVersion = asNumber(root.MinecraftDataVersion)
+  const minecraft_version = dataVersion !== null ? String(Math.trunc(dataVersion)) : undefined
+
+  const out: ParsedSchematicMetadata = {}
+  if (totalBlocks !== null && totalBlocks >= 0) out.block_count = Math.trunc(totalBlocks)
+  if (width !== null) out.bounds_width = Math.abs(Math.trunc(width))
+  if (height !== null) out.bounds_height = Math.abs(Math.trunc(height))
+  if (depth !== null) out.bounds_depth = Math.abs(Math.trunc(depth))
+  if (minecraft_version) out.minecraft_version = minecraft_version
+  return out
+}
+
+async function parseBedrockMCStructure(
+  data: ArrayBuffer | Uint8Array | Blob,
+): Promise<ParsedSchematicMetadata> {
+  // Bedrock .mcstructure: little-endian NBT, NOT gzipped.
+  const parsed = await read(data, { endian: 'little' })
+  const root = asCompound(parsed.data)
+  if (!root) return {}
+
+  // `size` is an IntArray [w, h, d] at the root.
+  const sizeRaw = unwrapTagValue(root.size)
+  const dims: number[] = []
+  if (sizeRaw instanceof Int32Array) {
+    for (const n of sizeRaw) dims.push(n)
+  } else if (Array.isArray(sizeRaw)) {
+    for (const n of sizeRaw) {
+      const asN = asNumber(n)
+      if (asN !== null) dims.push(asN)
+    }
+  }
+
+  const out: ParsedSchematicMetadata = {}
+  if (dims.length >= 3) {
+    out.bounds_width = Math.abs(Math.trunc(dims[0]))
+    out.bounds_height = Math.abs(Math.trunc(dims[1]))
+    out.bounds_depth = Math.abs(Math.trunc(dims[2]))
+  }
+
+  // Non-air block count: scan block_indices list (2-layer list of ints -> palette index).
+  const structure = asCompound(root.structure)
+  const palette = structure ? asCompound(structure.palette) : null
+  const defaultPalette = palette ? asCompound(palette.default) : null
+  const blockPalette = defaultPalette ? unwrapTagValue(defaultPalette.block_palette) : null
+  const airPaletteIndexes = new Set<number>()
+  if (Array.isArray(blockPalette)) {
+    blockPalette.forEach((entry, i) => {
+      const c = asCompound(entry)
+      if (!c) return
+      const name = asString(c.name)
+      if (name && AIR_BLOCKS.has(name)) airPaletteIndexes.add(i)
+    })
+  }
+
+  const blockIndicesRaw = structure ? unwrapTagValue(structure.block_indices) : null
+  if (Array.isArray(blockIndicesRaw) && blockIndicesRaw.length > 0) {
+    const layer = unwrapTagValue(blockIndicesRaw[0])
+    if (layer instanceof Int32Array) {
+      let count = 0
+      for (const idx of layer) {
+        if (idx >= 0 && !airPaletteIndexes.has(idx)) count++
+      }
+      out.block_count = count
+    } else if (Array.isArray(layer)) {
+      let count = 0
+      for (const raw of layer) {
+        const idx = asNumber(raw)
+        if (idx !== null && idx >= 0 && !airPaletteIndexes.has(idx)) count++
+      }
+      out.block_count = count
+    }
+  }
+
+  return out
+}
+
 export async function parseSchematicMetadata(
   format: DoorFileFormat,
   data: ArrayBuffer | Uint8Array | Blob,
 ): Promise<ParsedSchematicMetadata> {
   try {
-    if (format === 'schem') {
+    if (format === 'schem' || format === 'schematic') {
       return await parseSpongeSchematic(data)
     }
 
     if (format === 'litematic') {
-      // TODO: Parse Litematic metadata server-side.
-      return {}
+      return await parseLitematic(data)
     }
 
     if (format === 'mcstructure') {
-      // TODO: Parse MCStructure metadata server-side.
-      return {}
-    }
-
-    if (format === 'schematic') {
-      // TODO: Parse classic .schematic metadata server-side.
-      return {}
+      return await parseBedrockMCStructure(data)
     }
 
     return {}
