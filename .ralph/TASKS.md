@@ -25,12 +25,12 @@
 - 確認 `supabase/migrations/0001_doors.sql` 的 RLS 是 `authenticated INSERT with owner_id = auth.uid()`；如果不是要補
 - **驗證**：lint + tsc 綠
 
-### [ ] T1a. 修 storage 路徑到 `${user.id}/${doorId}/${fmt}.${ext}`
+### [x] T1a. 修 storage 路徑到 `${user.id}/${doorId}/${fmt}.${ext}`
 - 現在 WIP 版本寫進 `${doorId}/${fmt}.${ext}` — 第一段不是 user.id，違反 migration 的 RLS（`(storage.foldername(name))[1] = auth.uid()::text`），必拒
 - 把 `storagePath` 組字串改回 `${user.id}/${doorId}/${fmt}.${ext}`，確保上傳能通過 RLS
 - 只改 `app/upload/actions.ts`
 
-### [ ] T1b. 在 doors INSERT 補回 `owner_id: user.id`
+### [x] T1b. 在 doors INSERT 補回 `owner_id: user.id`
 - WIP refactor 把 `owner_id` 從 insert payload 刪掉了，但 migration 的 RLS `with check (owner_id = auth.uid())` 要求它必須存在且等於當前 user
 - `app/upload/actions.ts` doors insert 物件補上 `owner_id: user.id`
 - 沒補的話任何上傳都會被 RLS 拒
@@ -119,3 +119,4 @@
 
 <!-- e.g. - T1 done 2026-04-21: removed admin gate, lint/tsc green -->
 - T1 done 2026-04-21: kept WIP refactor of actions.ts, removed admin_users gate (never existed in migration). Lint+tsc green. Filed T1a/T1b/T1c for WIP breakage (storage path / owner_id / migration alignment).
+- T1a+T1b done 2026-04-21: storage path now `${user.id}/${doorId}/${fmt}.${ext}` (RLS compliant); doors insert now includes `owner_id: user.id`. Lint+tsc green.

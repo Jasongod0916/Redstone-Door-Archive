@@ -75,6 +75,7 @@ export async function createDoorAction(formData: FormData) {
     .insert({
       slug,
       title,
+      owner_id: user.id,
       author,
       description,
       minecraft_version: minecraftVersion,
@@ -100,7 +101,7 @@ export async function createDoorAction(formData: FormData) {
     if (!(blob instanceof File) || blob.size === 0) continue
     if (blob.size > MAX_FILE_BYTES) throw new Error(`${fmt} file exceeds 25 MB limit.`)
     const ext = fileExtension(blob.name, fmt)
-    const storagePath = `${doorId}/${fmt}.${ext}`
+    const storagePath = `${user.id}/${doorId}/${fmt}.${ext}`
 
     const { error: uploadErr } = await supabase.storage
       .from('schematics')
