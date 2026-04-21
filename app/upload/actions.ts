@@ -44,6 +44,20 @@ function fileExtension(name: string, fallback: string): string {
   return dot > 0 ? name.slice(dot + 1).toLowerCase() : fallback
 }
 
+// Reject obviously-wrong file contents. Sponge .schem / .schematic and
+// .litematic are gzip-compressed NBT (magic `1f 8b`). Bedrock .mcstructure
+// is raw little-endian NBT starting with a root compound tag (`0x0a`).
+function isLikelyValidFormat(fmt: DoorFileFormat, head: Uint8Array): boolean {
+  if (head.length < 2) return false
+  if (fmt === 'litematic' || fmt === 'schem' || fmt === 'schematic') {
+    return head[0] === 0x1f && head[1] === 0x8b
+  }
+  if (fmt === 'mcstructure') {
+    return head[0] === 0x0a
+  }
+  return true
+}
+
 function mergeParsedMetadata(
   accumulator: ParsedSchematicMetadata,
   parsed: ParsedSchematicMetadata,
@@ -127,6 +141,9 @@ export async function createDoorAction(formData: FormData) {
     if (!(blob instanceof File) || blob.size === 0) continue
     if (blob.size > MAX_FILE_BYTES) throw new Error(`${fmt} file exceeds 25 MB limit.`)
     const arrayBuffer = await blob.arrayBuffer()
+    if (!isLikelyValidFormat(fmt, new Uint8Array(arrayBuffer, 0, Math.min(4, arrayBuffer.byteLength)))) {
+      throw new Error(`${fmt} file doesn't match its declared format.`)
+    }
     const ext = fileExtension(blob.name, fmt)
     const storagePath = `${user.id}/${doorId}/${fmt}.${ext}`
 

@@ -106,7 +106,7 @@
 - 檢查 `supabase/migrations/0001_doors.sql` 的內容與目前 `app/upload/actions.ts` 使用的欄位是否一致（特別是 `door_files` 表）
 - 若沒對齊，補 migration
 
-### [ ] T12. Server-side 檔案格式驗證
+### [x] T12. Server-side 檔案格式驗證
 - 上傳時檢查 magic bytes 而不是只看副檔名，拒掉偽造檔
 - 可以與 T3 的解析共用邏輯
 
@@ -140,3 +140,4 @@
 - T16 done 2026-04-21: `bun run build` succeeds on Next 16 Turbopack in 10.3s, typecheck 4.3s, all 7 routes compile (/, /auth/{callback,google,login}, /upload, /view/[id], _not-found). Proxy middleware registered.
 - T11 done 2026-04-21: confirmed migrations 0001 + 0002 together cover every column/table that actions.ts and lib/types/door.ts reference (slug, door_size, block_count, bounds_*, thumbnail_url, sort_order in doors; separate door_files). Old 0001 columns kept for back-compat. 0002 is idempotent — safe to re-apply. Not verified against live DB (no linked project in this sandbox).
 - T14 done 2026-04-21: README rewritten with real project story — stack matrix, getting-started flow (install → setup:vendor → env → dev), migrations overview, RLS essentials, scripts table, architecture highlights. Replaces the default create-next-app stub.
+- T12 done 2026-04-21: added isLikelyValidFormat() magic-byte check in actions.ts — Sponge .schem/.schematic/.litematic must start with gzip magic 0x1f 0x8b, .mcstructure must start with NBT compound tag 0x0a. Rejects mis-declared or corrupt files before they reach storage. Lint+tsc green.
