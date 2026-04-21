@@ -141,3 +141,23 @@
 - T11 done 2026-04-21: confirmed migrations 0001 + 0002 together cover every column/table that actions.ts and lib/types/door.ts reference (slug, door_size, block_count, bounds_*, thumbnail_url, sort_order in doors; separate door_files). Old 0001 columns kept for back-compat. 0002 is idempotent — safe to re-apply. Not verified against live DB (no linked project in this sandbox).
 - T14 done 2026-04-21: README rewritten with real project story — stack matrix, getting-started flow (install → setup:vendor → env → dev), migrations overview, RLS essentials, scripts table, architecture highlights. Replaces the default create-next-app stub.
 - T12 done 2026-04-21: added isLikelyValidFormat() magic-byte check in actions.ts — Sponge .schem/.schematic/.litematic must start with gzip magic 0x1f 0x8b, .mcstructure must start with NBT compound tag 0x0a. Rejects mis-declared or corrupt files before they reach storage. Lint+tsc green.
+
+---
+
+### Iteration 1 wrap-up (2026-04-21)
+
+**P0 goals fully met:**
+- Minimal upload UX (T1, T1a, T1b, T1c, T2, T3 partial, T4, T5, T12)
+- 3D performance (T6, T7, T8 partial, T9, T10)
+- Build green (T16)
+- Docs (T11, T14)
+
+**Open for later iterations (lower priority):**
+- T3b .litematic parser (stub in place, returns {})
+- T3c .mcstructure parser (stub in place, returns {})
+- T8 quality-toggle UI (DPR cap already in place)
+- T13 auto-thumbnail generation (non-trivial — needs client canvas capture)
+- T15 /qa-only run (interactive, user-driven)
+
+13 commits landed this iteration. `bun run build` / `bun run lint` /
+`bunx tsc --noEmit` all green.
