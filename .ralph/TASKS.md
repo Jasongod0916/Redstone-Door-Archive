@@ -76,7 +76,7 @@
 
 ## P0 — 3D 效能
 
-### [ ] T6. 自託管 Three.js 與 schematic-renderer
+### [x] T6. 自託管 Three.js 與 schematic-renderer
 - `cd schematic-renderer && bun install && bun run build`（這會編 WASM，需要 wasm-pack；先檢查 wasm-pack 有沒有裝，沒有就跳過、把任務改為「裝 wasm-pack 指示寫進 README」）
 - 把 `schematic-renderer/dist/schematic-renderer.umd.js` 複製到 `public/vendor/`
 - Three.js：從 node_modules 拿 `three.min.js` 或 CDN 下載後放 `public/vendor/`
@@ -132,3 +132,4 @@
 - T1c done 2026-04-21: added migration 0002 with slug/door_size/block_count/bounds_*/thumbnail_url/sort_order columns (nullable additions, no drops), door_files table + RLS, and default gen_random_uuid()::text for doors.id. Idempotent. Not yet pushed to DB.
 - T2 done 2026-04-21: upload form now shows only Title + Door size + file inputs above the fold; author/MC version/description/stats/video/tags collapsed into `<details>` "Advanced (optional)". Also propagates the WIP column renames (non_air_blocks→block_count, bbox_*→bounds_*) to match migration 0002. Lint+tsc green.
 - T3 partial 2026-04-21: added nbtify dep + lib/schematic/parse.ts. Sponge .schem parser extracts bounds_width/height/depth + non-air block_count via varint decode + palette air-exclusion. litematic/mcstructure/nbt/schematic return {} stubs. Wired into actions.ts as post-upload doors UPDATE (fills only null fields, silent on failure). Lint+tsc green.
+- T6 done 2026-04-21: self-hosted 3D deps via `bun run setup:vendor` (scripts/setup-vendor.sh). Downloads three@0.159.0 UMD (668KB) + schematic-renderer@1.1.23 UMD (29.5MB) to public/vendor/, gitignored. Viewer defaults + .env.local.example point at /vendor/*. Fixes two latent bugs: three@0.181.2 has no UMD build, and sr@1.1.24 never existed on npm. Added ESLint ignore for public/vendor/**.

@@ -46,3 +46,6 @@ next-env.d.ts
 .remember/
 .idea/
 __pycache__/
+
+# 3D viewer vendor assets — hydrated by `bun run setup:vendor`
+/public/vendor/*.js

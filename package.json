@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "setup:vendor": "bash scripts/setup-vendor.sh",
     "db:link": "bunx supabase link --project-ref mhygitjlhnyyckdnilgb",
     "db:push": "bunx supabase db push",
     "db:reset": "bunx supabase db reset",

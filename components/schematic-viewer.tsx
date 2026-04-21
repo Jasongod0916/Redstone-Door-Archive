@@ -17,13 +17,10 @@ declare global {
   }
 }
 
-const THREE_SRC =
-  process.env.NEXT_PUBLIC_THREE_URL ??
-  'https://unpkg.com/three@0.181.2/build/three.min.js'
+const THREE_SRC = process.env.NEXT_PUBLIC_THREE_URL ?? '/vendor/three.min.js'
 
 const RENDERER_SRC =
-  process.env.NEXT_PUBLIC_SCHEMATIC_RENDERER_URL ??
-  'https://unpkg.com/schematic-renderer@1.1.24/dist/schematic-renderer.umd.js'
+  process.env.NEXT_PUBLIC_SCHEMATIC_RENDERER_URL ?? '/vendor/schematic-renderer.umd.js'
 
 type SchematicViewerProps = {
   /** Public URL of a .litematic / .schem / .mcstructure file. */

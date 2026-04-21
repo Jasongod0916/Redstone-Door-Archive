@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Subprojects and legacy references have their own lint setups.
     "schematic-renderer/**",
     "old-references/**",
+    // Vendored 3D bundles — prebuilt UMD, hydrated by `bun run setup:vendor`.
+    "public/vendor/**",
   ]),
 ]);
 
