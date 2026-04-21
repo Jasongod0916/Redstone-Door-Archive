@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import SchematicViewer from '@/components/schematic-viewer-lazy'
 import { getDoor } from '@/lib/doors/queries'
+import type { DoorFileFormat, DoorWithFiles } from '@/lib/types/door'
 
 type Params = Promise<{ id: string }>
 
@@ -12,8 +13,44 @@ const THREE_SRC = process.env.NEXT_PUBLIC_THREE_URL ?? '/vendor/three.min.js'
 const RENDERER_SRC =
   process.env.NEXT_PUBLIC_SCHEMATIC_RENDERER_URL ?? '/vendor/schematic-renderer.umd.js'
 
+const FORMAT_PREFERENCE: DoorFileFormat[] = ['litematic', 'schem', 'mcstructure', 'schematic', 'nbt']
+
 function schematicPublicUrl(storagePath: string): string {
   return `${SUPABASE_URL}/storage/v1/object/public/schematics/${storagePath}`
+}
+
+type ResolvedFile = {
+  id: string
+  format: DoorFileFormat
+  url: string
+  file_name: string
+}
+
+// Combine the new door_files relation with the legacy `doors.files` jsonb so
+// pre-refactor rows still render. Rows from door_files take precedence when
+// both exist for the same format.
+function resolveFiles(door: DoorWithFiles): ResolvedFile[] {
+  const resolved: ResolvedFile[] = door.door_files.map((f) => ({
+    id: f.id,
+    format: f.format,
+    url: schematicPublicUrl(f.storage_path),
+    file_name: f.file_name,
+  }))
+  const covered = new Set(resolved.map((r) => r.format))
+  const legacy = door.files ?? null
+  if (legacy) {
+    for (const [key, url] of Object.entries(legacy)) {
+      const format = key as DoorFileFormat
+      if (!url || covered.has(format)) continue
+      resolved.push({
+        id: `legacy:${format}`,
+        format,
+        url,
+        file_name: `${door.id}.${format}`,
+      })
+    }
+  }
+  return resolved
 }
 
 function youtubeEmbed(url: string | null): string | null {
@@ -39,14 +76,13 @@ export default async function DoorDetailPage({ params }: { params: Params }) {
   const door = await getDoor(id)
   if (!door) notFound()
 
+  const files = resolveFiles(door)
   const preferredFile =
-    door.door_files.find((f) => f.format === 'litematic') ??
-    door.door_files.find((f) => f.format === 'schem') ??
-    door.door_files.find((f) => f.format === 'mcstructure') ??
-    door.door_files[0] ??
+    FORMAT_PREFERENCE.map((fmt) => files.find((f) => f.format === fmt)).find(Boolean) ??
+    files[0] ??
     null
 
-  const schematicUrl = preferredFile ? schematicPublicUrl(preferredFile.storage_path) : null
+  const schematicUrl = preferredFile?.url ?? null
   const embedSrc = youtubeEmbed(door.video_url)
 
   return (
@@ -145,13 +181,13 @@ export default async function DoorDetailPage({ params }: { params: Params }) {
           {/* Downloads */}
           <div className="border border-border bg-card p-4 flex flex-col gap-3">
             <p className="text-muted-foreground text-xs tracking-widest uppercase">Downloads</p>
-            {door.door_files.length === 0 ? (
+            {files.length === 0 ? (
               <p className="text-muted-foreground text-xs">No files available.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {door.door_files.map((f) => (
+                {files.map((f) => (
                   <Button key={f.id} asChild variant="outline" size="sm">
-                    <a href={schematicPublicUrl(f.storage_path)} download={f.file_name}>
+                    <a href={f.url} download={f.file_name}>
                       .{f.format}
                     </a>
                   </Button>

@@ -1,30 +1,43 @@
-export type DoorFileKey = 'litematic' | 'schem' | 'mcstructure'
+export type DoorFileFormat = 'litematic' | 'schem' | 'mcstructure' | 'schematic' | 'nbt'
 
-export type DoorFiles = Partial<Record<DoorFileKey, string | null>>
+export type DoorFile = {
+  id: string
+  door_id: string
+  format: DoorFileFormat
+  storage_path: string
+  file_name: string
+  file_size: number | null
+  created_at: string
+}
 
 export type Door = {
   id: string
+  slug: string
   title: string
   author: string
   description: string | null
   minecraft_version: string | null
-  door_width: number
-  door_height: number
-  non_air_blocks: number | null
-  bbox_w: number | null
-  bbox_h: number | null
-  bbox_d: number | null
+  door_size: string
+  tags: string[]
+  block_count: number | null
+  bounds_width: number | null
+  bounds_height: number | null
+  bounds_depth: number | null
   open_ticks: number | null
   close_ticks: number | null
   total_ticks: number | null
   video_url: string | null
-  tags: string[]
-  files: DoorFiles
-  owner_id: string | null
+  thumbnail_url: string | null
+  sort_order: number
   created_at: string
   updated_at: string
 }
 
-export type DoorInsert = Omit<Door, 'created_at' | 'updated_at'>
+// Legacy jsonb shape from migration 0001 — maps format → public URL. Kept
+// readable as a read-side fallback so pre-refactor doors still render.
+export type LegacyFiles = Partial<Record<DoorFileFormat, string>>
 
-export const doorSizeLabel = (w: number, h: number) => `${w}x${h}`
+export type DoorWithFiles = Door & {
+  door_files: DoorFile[]
+  files?: LegacyFiles | null
+}

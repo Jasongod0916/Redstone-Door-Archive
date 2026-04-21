@@ -1,9 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Door } from '@/lib/types/door'
+import type { Door, DoorWithFiles } from '@/lib/types/door'
 
 export type DoorsListOptions = {
-  width?: number
-  height?: number
+  size?: string
   sort?: 'recent' | 'blocks' | 'ticks'
   search?: string
 }
@@ -12,8 +11,7 @@ export async function listDoors(opts: DoorsListOptions = {}): Promise<Door[]> {
   const supabase = await createClient()
   let q = supabase.from('doors').select('*')
 
-  if (typeof opts.width === 'number') q = q.eq('door_width', opts.width)
-  if (typeof opts.height === 'number') q = q.eq('door_height', opts.height)
+  if (opts.size) q = q.eq('door_size', opts.size)
 
   if (opts.search) {
     const term = `%${opts.search}%`
@@ -22,7 +20,7 @@ export async function listDoors(opts: DoorsListOptions = {}): Promise<Door[]> {
 
   switch (opts.sort) {
     case 'blocks':
-      q = q.order('non_air_blocks', { ascending: true, nullsFirst: false })
+      q = q.order('block_count', { ascending: true, nullsFirst: false })
       break
     case 'ticks':
       q = q.order('total_ticks', { ascending: true, nullsFirst: false })
@@ -37,23 +35,33 @@ export async function listDoors(opts: DoorsListOptions = {}): Promise<Door[]> {
   return (data ?? []) as Door[]
 }
 
-export async function getDoor(id: string): Promise<Door | null> {
+export async function getDoor(id: string): Promise<DoorWithFiles | null> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('doors').select('*').eq('id', id).maybeSingle()
+  // `*` picks up the legacy `files` jsonb (migration 0001) alongside
+  // everything else; older rows store their schematic URLs there and the
+  // view page falls back to it when door_files has no rows.
+  const { data, error } = await supabase
+    .from('doors')
+    .select('*, door_files(*)')
+    .eq('id', id)
+    .maybeSingle()
   if (error) throw error
-  return (data as Door | null) ?? null
+  return (data as DoorWithFiles | null) ?? null
 }
 
-export async function listAvailableSizes(): Promise<Array<{ w: number; h: number; count: number }>> {
+export async function listAvailableSizes(): Promise<Array<{ size: string; count: number }>> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('doors').select('door_width, door_height')
+  const { data, error } = await supabase.from('doors').select('door_size')
   if (error) throw error
-  const map = new Map<string, { w: number; h: number; count: number }>()
+  const map = new Map<string, number>()
   for (const row of data ?? []) {
-    const key = `${row.door_width}x${row.door_height}`
-    const current = map.get(key) ?? { w: row.door_width, h: row.door_height, count: 0 }
-    current.count += 1
-    map.set(key, current)
+    map.set(row.door_size, (map.get(row.door_size) ?? 0) + 1)
   }
-  return Array.from(map.values()).sort((a, b) => a.w - b.w || a.h - b.h)
+  return Array.from(map.entries())
+    .map(([size, count]) => ({ size, count }))
+    .sort((a, b) => {
+      const [aw, ah] = a.size.split('x').map(Number)
+      const [bw, bh] = b.size.split('x').map(Number)
+      return aw - bw || ah - bh
+    })
 }
