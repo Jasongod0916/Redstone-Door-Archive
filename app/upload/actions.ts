@@ -4,6 +4,10 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import type { DoorFileFormat } from '@/lib/types/door'
+import {
+  parseSchematicMetadata,
+  type ParsedSchematicMetadata,
+} from '@/lib/schematic/parse'
 
 const FILE_FORMATS: DoorFileFormat[] = ['litematic', 'schem', 'mcstructure']
 const MAX_FILE_BYTES = 25 * 1024 * 1024
@@ -38,6 +42,27 @@ function asRequiredInt(value: FormDataEntryValue | null): number {
 function fileExtension(name: string, fallback: string): string {
   const dot = name.lastIndexOf('.')
   return dot > 0 ? name.slice(dot + 1).toLowerCase() : fallback
+}
+
+function mergeParsedMetadata(
+  accumulator: ParsedSchematicMetadata,
+  parsed: ParsedSchematicMetadata,
+) {
+  if (accumulator.block_count == null && parsed.block_count != null) {
+    accumulator.block_count = parsed.block_count
+  }
+  if (accumulator.bounds_width == null && parsed.bounds_width != null) {
+    accumulator.bounds_width = parsed.bounds_width
+  }
+  if (accumulator.bounds_height == null && parsed.bounds_height != null) {
+    accumulator.bounds_height = parsed.bounds_height
+  }
+  if (accumulator.bounds_depth == null && parsed.bounds_depth != null) {
+    accumulator.bounds_depth = parsed.bounds_depth
+  }
+  if (accumulator.minecraft_version == null && parsed.minecraft_version != null) {
+    accumulator.minecraft_version = parsed.minecraft_version
+  }
 }
 
 export async function createDoorAction(formData: FormData) {
@@ -95,11 +120,13 @@ export async function createDoorAction(formData: FormData) {
 
   const doorId = doorRow.id
   let fileCount = 0
+  const parsedMetadata: ParsedSchematicMetadata = {}
 
   for (const fmt of FILE_FORMATS) {
     const blob = formData.get(`file_${fmt}`)
     if (!(blob instanceof File) || blob.size === 0) continue
     if (blob.size > MAX_FILE_BYTES) throw new Error(`${fmt} file exceeds 25 MB limit.`)
+    const arrayBuffer = await blob.arrayBuffer()
     const ext = fileExtension(blob.name, fmt)
     const storagePath = `${user.id}/${doorId}/${fmt}.${ext}`
 
@@ -116,12 +143,41 @@ export async function createDoorAction(formData: FormData) {
       file_size: blob.size,
     })
     if (fileErr) throw new Error(`Save file record: ${fileErr.message}`)
+
+    const parsed = await parseSchematicMetadata(fmt, arrayBuffer)
+    mergeParsedMetadata(parsedMetadata, parsed)
     fileCount++
   }
 
   if (fileCount === 0) {
     await supabase.from('doors').delete().eq('id', doorId)
     throw new Error('Attach at least one schematic file (.litematic, .schem, or .mcstructure).')
+  }
+
+  const fillUpdate: Record<string, string | number> = {}
+  if (blockCount === null && parsedMetadata.block_count != null) {
+    fillUpdate.block_count = parsedMetadata.block_count
+  }
+  if (boundsW === null && parsedMetadata.bounds_width != null) {
+    fillUpdate.bounds_width = parsedMetadata.bounds_width
+  }
+  if (boundsH === null && parsedMetadata.bounds_height != null) {
+    fillUpdate.bounds_height = parsedMetadata.bounds_height
+  }
+  if (boundsD === null && parsedMetadata.bounds_depth != null) {
+    fillUpdate.bounds_depth = parsedMetadata.bounds_depth
+  }
+  if (minecraftVersion === null && parsedMetadata.minecraft_version != null) {
+    fillUpdate.minecraft_version = parsedMetadata.minecraft_version
+  }
+
+  if (Object.keys(fillUpdate).length > 0) {
+    try {
+      const { error: updateErr } = await supabase.from('doors').update(fillUpdate).eq('id', doorId)
+      if (updateErr) void updateErr
+    } catch (updateErr) {
+      void updateErr
+    }
   }
 
   revalidatePath('/')

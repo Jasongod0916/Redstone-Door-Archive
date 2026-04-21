@@ -49,11 +49,20 @@
 - `actions.ts`：對應調整 — 沒填的 stats 全部允許 null（DB 已經允許）
 - Author 預設值用 email 前綴（已經這樣做了），保留
 
-### [ ] T3. Server-side 從 schematic 檔自動解出 stats
+### [~] T3. Server-side 從 schematic 檔自動解出 stats (partial — schem only)
 - 選用 npm 套件：優先看 `deepslate`（純 JS Minecraft 資料解析），沒有就用 `prismarine-nbt` + 自寫 litematic 解碼
 - 在 `createDoorAction` 裡：收到 `.litematic` / `.schem` / `.mcstructure` 後，解出 `block_count`、`bounds_w/h/d`、`minecraft_version`（如檔案含）；把這些值**覆蓋**使用者未填的欄位
 - 如果解析失敗：不 abort，只 log warning，讓手填值或 null 通過
 - 這樣使用者只要丟檔案 + 標題 + 尺寸就好
+
+### [ ] T3b. 補 `.litematic` 解析器
+- 目前 `lib/schematic/parse.ts` 對 litematic 回傳 `{}` (stub)
+- litematic = gzip NBT，根有 `Regions.<name>.Size` (xyz compound)、`BlockStatePalette` (list)、`BlockStates` (long array, packed)
+- Non-air block count = 對 BlockStates 做 bitpack decode、查 palette、排除 air variants
+
+### [ ] T3c. 補 `.mcstructure` 解析器（Bedrock edition）
+- NBT，用 little-endian；根有 `size` int array [w, h, d]、`structure.block_indices` list
+- Block palette 裡的 `name` 匹配 'minecraft:air' 系列排除
 
 ### [ ] T4. 上傳頁加入 drag-and-drop
 - 改 `FileField` 為 drop zone（可多檔，自動依副檔名分派到對應格式槽位）
@@ -122,3 +131,4 @@
 - T1a+T1b done 2026-04-21: storage path now `${user.id}/${doorId}/${fmt}.${ext}` (RLS compliant); doors insert now includes `owner_id: user.id`. Lint+tsc green.
 - T1c done 2026-04-21: added migration 0002 with slug/door_size/block_count/bounds_*/thumbnail_url/sort_order columns (nullable additions, no drops), door_files table + RLS, and default gen_random_uuid()::text for doors.id. Idempotent. Not yet pushed to DB.
 - T2 done 2026-04-21: upload form now shows only Title + Door size + file inputs above the fold; author/MC version/description/stats/video/tags collapsed into `<details>` "Advanced (optional)". Also propagates the WIP column renames (non_air_blocks→block_count, bbox_*→bounds_*) to match migration 0002. Lint+tsc green.
+- T3 partial 2026-04-21: added nbtify dep + lib/schematic/parse.ts. Sponge .schem parser extracts bounds_width/height/depth + non-air block_count via varint decode + palette air-exclusion. litematic/mcstructure/nbt/schematic return {} stubs. Wired into actions.ts as post-upload doors UPDATE (fills only null fields, silent on failure). Lint+tsc green.
