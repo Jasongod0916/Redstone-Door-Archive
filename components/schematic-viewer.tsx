@@ -23,13 +23,41 @@ const RENDERER_SRC =
   process.env.NEXT_PUBLIC_SCHEMATIC_RENDERER_URL ?? '/vendor/schematic-renderer.umd.js'
 
 type SchematicViewerProps = {
-  /** Public URL of a .litematic / .schem / .mcstructure file. */
   schematicUrl: string
-  /** Stable identifier used as the schematic key the renderer keeps internally. */
   schematicId?: string
   className?: string
-  /** Optional label shown when the file cannot be loaded. */
   emptyLabel?: string
+}
+
+function applyPixelRatioCap(instance: unknown, ratio: number) {
+  if (!instance || typeof instance !== 'object') return
+  const candidates = ['renderer', 'core', 'threeJsRenderer'] as const
+  const record = instance as Record<string, unknown>
+  for (const key of candidates) {
+    const node = record[key]
+    if (!node || typeof node !== 'object') continue
+    const setPR = (node as Record<string, unknown>).setPixelRatio
+    if (typeof setPR === 'function') {
+      try {
+        ;(setPR as (r: number) => void).call(node, ratio)
+        return
+      } catch {
+        // best-effort; try next shape
+      }
+    }
+    const innerRenderer = (node as Record<string, unknown>).renderer
+    if (innerRenderer && typeof innerRenderer === 'object') {
+      const innerSetPR = (innerRenderer as Record<string, unknown>).setPixelRatio
+      if (typeof innerSetPR === 'function') {
+        try {
+          ;(innerSetPR as (r: number) => void).call(innerRenderer, ratio)
+          return
+        } catch {
+          // fall through
+        }
+      }
+    }
+  }
 }
 
 export default function SchematicViewer({
@@ -40,12 +68,36 @@ export default function SchematicViewer({
 }: SchematicViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const rendererRef = useRef<{ dispose?: () => void } | null>(null)
+  const [inView, setInView] = useState(false)
   const [threeReady, setThreeReady] = useState(false)
   const [rendererReady, setRendererReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!threeReady || !rendererReady) return
+    const target = canvasRef.current
+    if (!target) return
+    if (typeof IntersectionObserver === 'undefined') {
+      queueMicrotask(() => setInView(true))
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setInView(true)
+            observer.disconnect()
+            return
+          }
+        }
+      },
+      { rootMargin: '256px' },
+    )
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!inView || !threeReady || !rendererReady) return
     if (!canvasRef.current) return
 
     const Ctor = window.SchematicRenderer?.SchematicRenderer
@@ -69,8 +121,8 @@ export default function SchematicViewer({
           },
           {},
           {
-            backgroundColor: 0x8fa8cf,
-            showGrid: true,
+            backgroundColor: 0x111111,
+            showGrid: false,
             enableDragAndDrop: false,
             enableProgressBar: false,
             cameraOptions: { position: [18, 18, 18], useTightBounds: true },
@@ -78,9 +130,14 @@ export default function SchematicViewer({
         )
         if (cancelled) {
           instance.dispose?.()
-        } else {
-          rendererRef.current = instance
+          return
         }
+        rendererRef.current = instance
+        const ratio = Math.min(
+          typeof window !== 'undefined' ? window.devicePixelRatio : 1,
+          1.5,
+        )
+        applyPixelRatioCap(instance, ratio)
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err))
       }
@@ -91,22 +148,26 @@ export default function SchematicViewer({
       rendererRef.current?.dispose?.()
       rendererRef.current = null
     }
-  }, [threeReady, rendererReady, schematicId, schematicUrl])
+  }, [inView, threeReady, rendererReady, schematicId, schematicUrl])
 
   return (
     <div className={className}>
-      <Script
-        src={THREE_SRC}
-        strategy="afterInteractive"
-        onLoad={() => setThreeReady(true)}
-        onError={() => setError('Failed to load Three.js.')}
-      />
-      <Script
-        src={RENDERER_SRC}
-        strategy="afterInteractive"
-        onLoad={() => setRendererReady(true)}
-        onError={() => setError('Failed to load schematic-renderer.')}
-      />
+      {inView ? (
+        <>
+          <Script
+            src={THREE_SRC}
+            strategy="afterInteractive"
+            onLoad={() => setThreeReady(true)}
+            onError={() => setError('Failed to load Three.js.')}
+          />
+          <Script
+            src={RENDERER_SRC}
+            strategy="afterInteractive"
+            onLoad={() => setRendererReady(true)}
+            onError={() => setError('Failed to load schematic-renderer.')}
+          />
+        </>
+      ) : null}
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
       {error ? (
         <p role="alert" style={{ padding: 12, fontSize: 13 }}>

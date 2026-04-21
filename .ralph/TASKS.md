@@ -82,11 +82,11 @@
 - Three.js：從 node_modules 拿 `three.min.js` 或 CDN 下載後放 `public/vendor/`
 - 設 `.env.local.example` 加 `NEXT_PUBLIC_THREE_URL=/vendor/three.min.js` 與 `NEXT_PUBLIC_SCHEMATIC_RENDERER_URL=/vendor/schematic-renderer.umd.js`
 
-### [ ] T7. viewer 只在進入 viewport 才初始化
+### [x] T7. viewer 只在進入 viewport 才初始化
 - `components/schematic-viewer.tsx` 用 `IntersectionObserver`；canvas 還沒進 viewport 就不建立 renderer、不下載 script
 - 在 `<view>` 頁頂上方多內容時特別重要（目前 viewer 就在最頂端，差異不大，但之後 catalog 若加縮圖就很關鍵）
 
-### [ ] T8. 限制 devicePixelRatio + 降品質選項
+### [~] T8. 限制 devicePixelRatio + 降品質選項 (DPR cap done; quality toggle TODO)
 - 在 renderer options 加 `pixelRatio: Math.min(window.devicePixelRatio, 1.5)`（先查 schematic-renderer API 有沒有吃這個；沒有就改去碰它內部的 Three.js renderer）
 - 加一個切換按鈕：Performance / Quality 兩段
 
@@ -94,7 +94,7 @@
 - `app/view/[id]/page.tsx`：`<link rel="preload" as="script" href={THREE_SRC}>` 與 renderer 同理
 - 載入時顯示骨架（shadcn Skeleton），而不是空 canvas
 
-### [ ] T10. 關閉 grid + 背景色調整為更中性
+### [x] T10. 關閉 grid + 背景色調整為更中性
 - 現有 `showGrid: true, backgroundColor: 0x8fa8cf`（藍灰）— 改為預設 `showGrid: false`、背景 `0x1a1a1a` 或跟隨 theme
 - 加使用者切換
 
@@ -133,3 +133,4 @@
 - T2 done 2026-04-21: upload form now shows only Title + Door size + file inputs above the fold; author/MC version/description/stats/video/tags collapsed into `<details>` "Advanced (optional)". Also propagates the WIP column renames (non_air_blocks→block_count, bbox_*→bounds_*) to match migration 0002. Lint+tsc green.
 - T3 partial 2026-04-21: added nbtify dep + lib/schematic/parse.ts. Sponge .schem parser extracts bounds_width/height/depth + non-air block_count via varint decode + palette air-exclusion. litematic/mcstructure/nbt/schematic return {} stubs. Wired into actions.ts as post-upload doors UPDATE (fills only null fields, silent on failure). Lint+tsc green.
 - T6 done 2026-04-21: self-hosted 3D deps via `bun run setup:vendor` (scripts/setup-vendor.sh). Downloads three@0.159.0 UMD (668KB) + schematic-renderer@1.1.23 UMD (29.5MB) to public/vendor/, gitignored. Viewer defaults + .env.local.example point at /vendor/*. Fixes two latent bugs: three@0.181.2 has no UMD build, and sr@1.1.24 never existed on npm. Added ESLint ignore for public/vendor/**.
+- T7+T8+T10 done 2026-04-21: SchematicViewer now (a) lazy-inits via IntersectionObserver with 256px rootMargin — scripts only load when canvas is near viewport, (b) caps devicePixelRatio at 1.5 by probing the Three renderer via narrow-type helper, (c) defaults to backgroundColor 0x111111 + showGrid false. Codex rescue returned empty output twice so hand-implemented with React-19-safe queueMicrotask pattern. T8's quality-toggle UI deferred. Lint+tsc green.
