@@ -49,7 +49,7 @@
 - `actions.ts`：對應調整 — 沒填的 stats 全部允許 null（DB 已經允許）
 - Author 預設值用 email 前綴（已經這樣做了），保留
 
-### [~] T3. Server-side 從 schematic 檔自動解出 stats (partial — schem only)
+### [x] T3. Server-side 從 schematic 檔自動解出 stats
 - 選用 npm 套件：優先看 `deepslate`（純 JS Minecraft 資料解析），沒有就用 `prismarine-nbt` + 自寫 litematic 解碼
 - 在 `createDoorAction` 裡：收到 `.litematic` / `.schem` / `.mcstructure` 後，解出 `block_count`、`bounds_w/h/d`、`minecraft_version`（如檔案含）；把這些值**覆蓋**使用者未填的欄位
 - 如果解析失敗：不 abort，只 log warning，讓手填值或 null 通過
@@ -86,7 +86,7 @@
 - `components/schematic-viewer.tsx` 用 `IntersectionObserver`；canvas 還沒進 viewport 就不建立 renderer、不下載 script
 - 在 `<view>` 頁頂上方多內容時特別重要（目前 viewer 就在最頂端，差異不大，但之後 catalog 若加縮圖就很關鍵）
 
-### [~] T8. 限制 devicePixelRatio + 降品質選項 (DPR cap done; quality toggle TODO)
+### [x] T8. 限制 devicePixelRatio + 降品質選項
 - 在 renderer options 加 `pixelRatio: Math.min(window.devicePixelRatio, 1.5)`（先查 schematic-renderer API 有沒有吃這個；沒有就改去碰它內部的 Three.js renderer）
 - 加一個切換按鈕：Performance / Quality 兩段
 
@@ -148,6 +148,7 @@
 
 - T3b done: .litematic parser uses `Metadata.TotalBlocks` (Litematica writes it directly) for block_count, `Metadata.EnclosingSize` for bounds (fallback to first region's Size with abs()). `MinecraftDataVersion` for version. Shortcut avoids the bitpacked long-array BlockStates unpack that would require careful bigint math.
 - T3c done: .mcstructure parser reads little-endian NBT via nbtify `{endian:'little'}`. `root.size` IntArray [w,h,d] → bounds. `structure.palette.default.block_palette` identifies air indices, then `structure.block_indices[0]` IntArray gets scanned for non-air count. Both handle typed-array or array shapes.
+- T8 done: added Perf/Quality toggle button overlaid on the viewer (top-right). Persists choice in localStorage under `schematic-viewer-quality`. Performance caps DPR at 1.0; Quality caps at 2.0 (both still min() against the device's actual DPR). Adding `quality` to the renderer effect's dep array means toggling disposes + rebuilds the renderer with the new cap.
 
 ### Iteration 1 wrap-up (2026-04-21)
 
