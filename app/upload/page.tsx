@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { createClient } from '@/lib/supabase/server'
 import { createDoorAction } from './actions'
+import UploadDropZone from './upload-drop-zone'
 
 export default async function UploadPage() {
   const supabase = await createClient()
@@ -35,11 +36,7 @@ export default async function UploadPage() {
           <Field label="Title" name="title" required />
         </Section>
 
-        <Section title="Schematic files" hint="Attach at least one.">
-          <FileField label=".litematic" name="file_litematic" accept=".litematic" />
-          <FileField label=".schem" name="file_schem" accept=".schem,.schematic" />
-          <FileField label=".mcstructure" name="file_mcstructure" accept=".mcstructure" />
-        </Section>
+        <UploadDropZone />
 
         <Section title="Door size">
           <div className="col-span-2 flex items-end gap-2">
@@ -145,11 +142,3 @@ function Field({
   )
 }
 
-function FileField({ label, name, accept }: { label: string; name: string; accept: string }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} type="file" accept={accept} />
-    </div>
-  )
-}

@@ -64,7 +64,7 @@
 - NBT，用 little-endian；根有 `size` int array [w, h, d]、`structure.block_indices` list
 - Block palette 裡的 `name` 匹配 'minecraft:air' 系列排除
 
-### [ ] T4. 上傳頁加入 drag-and-drop
+### [x] T4. 上傳頁加入 drag-and-drop
 - 改 `FileField` 為 drop zone（可多檔，自動依副檔名分派到對應格式槽位）
 - 拖進來立刻在前端 parse 一次給 preview（可選，先不做也可）
 
@@ -136,3 +136,4 @@
 - T7+T8+T10 done 2026-04-21: SchematicViewer now (a) lazy-inits via IntersectionObserver with 256px rootMargin — scripts only load when canvas is near viewport, (b) caps devicePixelRatio at 1.5 by probing the Three renderer via narrow-type helper, (c) defaults to backgroundColor 0x111111 + showGrid false. Codex rescue returned empty output twice so hand-implemented with React-19-safe queueMicrotask pattern. T8's quality-toggle UI deferred. Lint+tsc green.
 - T9 done 2026-04-21: view page emits `<link rel="preload" as="script">` for both vendor scripts so they're in-flight before IntersectionObserver fires. Loading skeleton in schematic-viewer-lazy now uses shadcn Skeleton (absolute positioned) behind the "Loading viewer…" caption. Lint+tsc green.
 - T5 done 2026-04-21: homepage already had a signed-in Upload button (top-right); added a soft CTA strip above filters for signed-out users linking to /auth/login?next=/upload. Lint+tsc green.
+- T4 done 2026-04-21: new Client Component app/upload/upload-drop-zone.tsx replaces the three FileField inputs. Single dashed drop area routes dropped/browsed files by extension (.litematic/.schem|.schematic/.mcstructure) onto three hidden sr-only `<input name="file_*">`. Shows queued file list with remove buttons. Form still posts via createDoorAction — no action change. Codex rescue attempted (3rd silent empty return today) so hand-implemented. Lint+tsc green.
