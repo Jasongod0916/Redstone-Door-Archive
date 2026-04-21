@@ -10,10 +10,13 @@ cd "$(dirname "$0")/.."
 VENDOR_DIR="public/vendor"
 mkdir -p "$VENDOR_DIR"
 
-THREE_VERSION="0.159.0"
+THREE_VERSION="0.181.2"
 SR_VERSION="1.1.23"
 
-THREE_URL="https://unpkg.com/three@${THREE_VERSION}/build/three.min.js"
+# Three.js dropped UMD after r0.159 so we load the ES module build and
+# assign the namespace to window.THREE ourselves — the schematic-renderer
+# UMD (which marks `three` as external) then picks it up there.
+THREE_URL="https://unpkg.com/three@${THREE_VERSION}/build/three.module.min.js"
 SR_URL="https://unpkg.com/schematic-renderer@${SR_VERSION}/dist/schematic-renderer.umd.js"
 
 download_if_missing() {
@@ -29,6 +32,6 @@ download_if_missing() {
 }
 
 echo "Hydrating $VENDOR_DIR ..."
-download_if_missing "$VENDOR_DIR/three.min.js"              "$THREE_URL"
+download_if_missing "$VENDOR_DIR/three.module.min.js"       "$THREE_URL"
 download_if_missing "$VENDOR_DIR/schematic-renderer.umd.js" "$SR_URL"
 echo "Done. Vendor assets ready."

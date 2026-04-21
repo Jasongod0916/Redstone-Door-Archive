@@ -9,7 +9,7 @@ import type { DoorFileFormat, DoorWithFiles } from '@/lib/types/door'
 type Params = Promise<{ id: string }>
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const THREE_SRC = process.env.NEXT_PUBLIC_THREE_URL ?? '/vendor/three.min.js'
+const THREE_SRC = process.env.NEXT_PUBLIC_THREE_URL ?? '/vendor/three.module.min.js'
 const RENDERER_SRC =
   process.env.NEXT_PUBLIC_SCHEMATIC_RENDERER_URL ?? '/vendor/schematic-renderer.umd.js'
 
@@ -70,7 +70,7 @@ export default async function DoorDetailPage({ params }: { params: Params }) {
   return (
     <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-6">
       {/* Preload the 3D viewer bundles so they're in-flight before IntersectionObserver fires. */}
-      <link rel="preload" as="script" href={THREE_SRC} />
+      <link rel="modulepreload" href={THREE_SRC} />
       <link rel="preload" as="script" href={RENDERER_SRC} />
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-xs pt-2">

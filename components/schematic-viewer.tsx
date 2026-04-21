@@ -17,10 +17,32 @@ declare global {
   }
 }
 
-const THREE_SRC = process.env.NEXT_PUBLIC_THREE_URL ?? '/vendor/three.min.js'
+// Three.js dropped the UMD build after r0.159, so we load the current ES
+// module build dynamically and assign the namespace to window.THREE. The
+// schematic-renderer UMD (which marks `three` as external) reads it from
+// there.
+const THREE_SRC = process.env.NEXT_PUBLIC_THREE_URL ?? '/vendor/three.module.min.js'
 
 const RENDERER_SRC =
   process.env.NEXT_PUBLIC_SCHEMATIC_RENDERER_URL ?? '/vendor/schematic-renderer.umd.js'
+
+let threeLoadPromise: Promise<void> | null = null
+
+function ensureThreeLoaded(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve()
+  if (window.THREE) return Promise.resolve()
+  if (!threeLoadPromise) {
+    threeLoadPromise = import(/* webpackIgnore: true */ /* @vite-ignore */ THREE_SRC)
+      .then((mod: unknown) => {
+        window.THREE = (mod as { default?: unknown }).default ?? mod
+      })
+      .catch((err) => {
+        threeLoadPromise = null
+        throw err
+      })
+  }
+  return threeLoadPromise
+}
 
 type SchematicViewerProps = {
   schematicUrl: string
@@ -37,6 +59,30 @@ function readStoredQuality(): Quality {
   if (typeof window === 'undefined') return 'performance'
   const stored = window.localStorage.getItem(QUALITY_STORAGE_KEY)
   return stored === 'quality' ? 'quality' : 'performance'
+}
+
+function ThreeLoader({
+  onReady,
+  onFail,
+}: {
+  onReady: () => void
+  onFail: (message: string) => void
+}) {
+  useEffect(() => {
+    let cancelled = false
+    ensureThreeLoaded()
+      .then(() => {
+        if (!cancelled) onReady()
+      })
+      .catch((err) => {
+        if (cancelled) return
+        onFail(err instanceof Error ? err.message : 'Failed to load Three.js.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [onReady, onFail])
+  return null
 }
 
 function applyPixelRatioCap(instance: unknown, ratio: number) {
@@ -201,18 +247,15 @@ export default function SchematicViewer({
       </button>
       {inView ? (
         <>
-          <Script
-            src={THREE_SRC}
-            strategy="afterInteractive"
-            onLoad={() => setThreeReady(true)}
-            onError={() => setError('Failed to load Three.js.')}
-          />
-          <Script
-            src={RENDERER_SRC}
-            strategy="afterInteractive"
-            onLoad={() => setRendererReady(true)}
-            onError={() => setError('Failed to load schematic-renderer.')}
-          />
+          <ThreeLoader onReady={() => setThreeReady(true)} onFail={setError} />
+          {threeReady ? (
+            <Script
+              src={RENDERER_SRC}
+              strategy="afterInteractive"
+              onLoad={() => setRendererReady(true)}
+              onError={() => setError('Failed to load schematic-renderer.')}
+            />
+          ) : null}
         </>
       ) : null}
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
