@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Redstone Door Archive
 
-## Getting Started
+A Next.js 16 + React 19 app for cataloguing and previewing Minecraft redstone
+doors. Public browsing; signed-in users can upload. Uploaded schematics render
+in an in-browser 3D viewer (Three.js + the `schematic-renderer` WASM bundle).
 
-First, run the development server:
+## Stack
+
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 16 App Router, React 19 |
+| Package manager | Bun |
+| Styling | Tailwind v4 (no `tailwind.config`), shadcn/ui (`radix-lyra`), Phosphor icons |
+| Auth & storage | Supabase (`@supabase/ssr` cookies; RLS on `doors` + `schematics` bucket) |
+| Schematic parsing | `nbtify` server-side (`.schem` Sponge format today; `.litematic` + `.mcstructure` are stubs) |
+| 3D viewer | UMD builds of `three@0.159` + `schematic-renderer@1.1.23`, self-hosted under `public/vendor/` |
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
+bun run setup:vendor          # downloads Three.js + schematic-renderer UMD (~30 MB, gitignored)
+cp .env.local.example .env.local
+# fill in NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Supabase schema
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Two migrations live under `supabase/migrations/`:
 
-## Learn More
+- `0001_doors.sql` — initial table, RLS, and `schematics` storage bucket.
+- `0002_doors_refactor.sql` — adds `slug`, `door_size`, `block_count`,
+  `bounds_*`, `thumbnail_url`, `sort_order` columns, a `door_files` table,
+  and a `gen_random_uuid()` default for `doors.id`. Idempotent.
 
-To learn more about Next.js, take a look at the following resources:
+With the project linked (`bun run db:link` after editing the ref in
+`package.json`):
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+bun run db:push
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### RLS essentials
 
-## Deploy on Vercel
+- `doors`: public SELECT; authenticated INSERT must set `owner_id = auth.uid()`.
+- `door_files`: public SELECT; authenticated writes gated on `doors.owner_id`.
+- `storage.objects` (schematics bucket): first path segment must equal
+  `auth.uid()::text`. Uploads are written to
+  `{userId}/{doorId}/{format}.{ext}`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| | |
+|---|---|
+| `bun dev` | Dev server |
+| `bun run build` | Production build (Turbopack) |
+| `bun start` | Serve the production build |
+| `bun run lint` | ESLint (flat config) |
+| `bunx tsc --noEmit` | Typecheck |
+| `bun run setup:vendor` | Hydrate `public/vendor/` |
+| `bun run db:push` | Apply migrations to the linked Supabase project |
+
+## Architecture highlights
+
+- `proxy.ts` replaces Next 12's `middleware.ts` (renamed in Next 16). It
+  refreshes Supabase sessions on every request and only redirects
+  `/upload` and `/admin` when there's no user.
+- `components/schematic-viewer-lazy.tsx` is a `next/dynamic` (`ssr: false`)
+  wrapper. Server Components import this, not the raw viewer — `ssr: false`
+  on `next/dynamic` only works in Client Components.
+- The viewer defers all loading until `IntersectionObserver` reports the
+  canvas is in (or near) the viewport, and caps `devicePixelRatio` at 1.5.
+- `lib/schematic/parse.ts` runs server-side after upload, decodes `.schem`
+  NBT, counts non-air blocks via varint, and back-fills any stats the user
+  left blank on the form.
+
+## Contributing
+
+There's no test runner wired into the Next app; the vendored
+`schematic-renderer/` is a separate Vite/Vitest project with its own setup
+and is ignored by this repo's lint + typecheck.
+
+See `CLAUDE.md` + `AGENTS.md` for details an AI coding assistant needs to
+stay safe around the Next 16 / React 19 sharp edges.

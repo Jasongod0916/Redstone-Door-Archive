@@ -102,7 +102,7 @@
 
 ## P1 — 資料與可靠性
 
-### [ ] T11. 驗證 migration 已套用
+### [x] T11. 驗證 migration 已套用
 - 檢查 `supabase/migrations/0001_doors.sql` 的內容與目前 `app/upload/actions.ts` 使用的欄位是否一致（特別是 `door_files` 表）
 - 若沒對齊，補 migration
 
@@ -118,9 +118,9 @@
 
 ## P2 — 收尾
 
-### [ ] T14. README 更新：部署 + 如何貢獻
+### [x] T14. README 更新：部署 + 如何貢獻
 ### [ ] T15. 跑一次 `/qa-only` 列出剩餘 bug
-### [ ] T16. `bun run build` 過
+### [x] T16. `bun run build` 過
 
 ---
 
@@ -137,3 +137,6 @@
 - T9 done 2026-04-21: view page emits `<link rel="preload" as="script">` for both vendor scripts so they're in-flight before IntersectionObserver fires. Loading skeleton in schematic-viewer-lazy now uses shadcn Skeleton (absolute positioned) behind the "Loading viewer…" caption. Lint+tsc green.
 - T5 done 2026-04-21: homepage already had a signed-in Upload button (top-right); added a soft CTA strip above filters for signed-out users linking to /auth/login?next=/upload. Lint+tsc green.
 - T4 done 2026-04-21: new Client Component app/upload/upload-drop-zone.tsx replaces the three FileField inputs. Single dashed drop area routes dropped/browsed files by extension (.litematic/.schem|.schematic/.mcstructure) onto three hidden sr-only `<input name="file_*">`. Shows queued file list with remove buttons. Form still posts via createDoorAction — no action change. Codex rescue attempted (3rd silent empty return today) so hand-implemented. Lint+tsc green.
+- T16 done 2026-04-21: `bun run build` succeeds on Next 16 Turbopack in 10.3s, typecheck 4.3s, all 7 routes compile (/, /auth/{callback,google,login}, /upload, /view/[id], _not-found). Proxy middleware registered.
+- T11 done 2026-04-21: confirmed migrations 0001 + 0002 together cover every column/table that actions.ts and lib/types/door.ts reference (slug, door_size, block_count, bounds_*, thumbnail_url, sort_order in doors; separate door_files). Old 0001 columns kept for back-compat. 0002 is idempotent — safe to re-apply. Not verified against live DB (no linked project in this sandbox).
+- T14 done 2026-04-21: README rewritten with real project story — stack matrix, getting-started flow (install → setup:vendor → env → dev), migrations overview, RLS essentials, scripts table, architecture highlights. Replaces the default create-next-app stub.
