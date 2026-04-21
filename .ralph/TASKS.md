@@ -35,7 +35,7 @@
 - `app/upload/actions.ts` doors insert 物件補上 `owner_id: user.id`
 - 沒補的話任何上傳都會被 RLS 拒
 
-### [ ] T1c. 寫 migration 0002，把 schema 對齊到 `lib/types/door.ts`
+### [x] T1c. 寫 migration 0002，把 schema 對齊到 `lib/types/door.ts`
 - 目前 `migrations/0001_doors.sql` schema 是舊版（`door_width/door_height` ints、`non_air_blocks`、`bbox_w/h/d`、`files jsonb`、沒有 `door_files` 表）
 - 但 types 與 action 用新版（`slug` text、`door_size` text、`block_count`、`bounds_*`、獨立 `door_files` 表、`thumbnail_url`、`sort_order`）
 - 新增 `supabase/migrations/0002_doors_refactor.sql`：
@@ -120,3 +120,4 @@
 <!-- e.g. - T1 done 2026-04-21: removed admin gate, lint/tsc green -->
 - T1 done 2026-04-21: kept WIP refactor of actions.ts, removed admin_users gate (never existed in migration). Lint+tsc green. Filed T1a/T1b/T1c for WIP breakage (storage path / owner_id / migration alignment).
 - T1a+T1b done 2026-04-21: storage path now `${user.id}/${doorId}/${fmt}.${ext}` (RLS compliant); doors insert now includes `owner_id: user.id`. Lint+tsc green.
+- T1c done 2026-04-21: added migration 0002 with slug/door_size/block_count/bounds_*/thumbnail_url/sort_order columns (nullable additions, no drops), door_files table + RLS, and default gen_random_uuid()::text for doors.id. Idempotent. Not yet pushed to DB.
