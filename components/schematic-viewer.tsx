@@ -44,6 +44,36 @@ const RESOURCE_PACK_URL = process.env.NEXT_PUBLIC_RESOURCE_PACK_URL ?? '/vendor/
 
 let threeLoadPromise: Promise<void> | null = null
 let resourcePackPromise: Promise<ArrayBuffer> | null = null
+let srErrorSuppressorInstalled = false
+
+// schematic-renderer's dispose() aborts on a "FFmpeg not found" throw before
+// it can disconnect the canvas ResizeObserver it attached in the ctor. The
+// leaked observer then fires `updateCanvasSize` against a disposed instance
+// and reads `.camera` off `undefined`. React 19 strict-mode double-mount
+// triggers this reliably in dev. We can't patch sr internals, but we can
+// silence this one specific error before it bubbles to the Next.js overlay.
+function installSrErrorSuppressor() {
+  if (srErrorSuppressorInstalled) return
+  if (typeof window === 'undefined') return
+  srErrorSuppressorInstalled = true
+  const matches = (msg: string, src: string) =>
+    msg.includes("reading 'camera'") && src.includes('schematic-renderer')
+  window.addEventListener('error', (e) => {
+    const msg = e.error?.message ?? e.message ?? ''
+    const src = e.filename ?? ''
+    if (matches(msg, src)) {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+    }
+  })
+  window.addEventListener('unhandledrejection', (e) => {
+    const msg = e.reason?.message ?? String(e.reason ?? '')
+    const src = e.reason?.stack ?? ''
+    if (matches(msg, src)) {
+      e.preventDefault()
+    }
+  })
+}
 
 function ensureResourcePack(): Promise<ArrayBuffer> {
   if (!resourcePackPromise) {
@@ -163,6 +193,7 @@ export default function SchematicViewer({
   const [quality, setQuality] = useState<Quality>('performance')
 
   useEffect(() => {
+    installSrErrorSuppressor()
     queueMicrotask(() => setQuality(readStoredQuality()))
   }, [])
 
@@ -213,8 +244,19 @@ export default function SchematicViewer({
     let cancelled = false
     let localInstance: SchematicRendererInstance | null = null
 
+    const safeDispose = (instance: SchematicRendererInstance | null) => {
+      if (!instance) return
+      try {
+        instance.dispose?.()
+      } catch {
+        // sr.dispose() throws "FFmpeg not found" when the unused FFmpeg
+        // subsystem was never initialized — swallow.
+      }
+    }
+
     const run = async () => {
       try {
+        if (cancelled) return
         // Construct the renderer empty first (mirrors the pattern in
         // old-references/door-catalog-viewer.html). Loading the schematic
         // or resource pack in the constructor is unreliable across versions
@@ -248,6 +290,10 @@ export default function SchematicViewer({
             },
           },
         })
+        if (cancelled) {
+          safeDispose(instance)
+          return
+        }
         localInstance = instance
         rendererRef.current = instance
 
@@ -289,14 +335,7 @@ export default function SchematicViewer({
 
     return () => {
       cancelled = true
-      // schematic-renderer's dispose() throws "FFmpeg not found" when the
-      // (unused) FFmpeg subsystem was never initialized. Swallow — the 3D
-      // scene is already torn down by this point.
-      try {
-        localInstance?.dispose?.()
-      } catch {
-        // ignore
-      }
+      safeDispose(localInstance)
       if (rendererRef.current === localInstance) rendererRef.current = null
     }
   }, [inView, threeReady, rendererReady, schematicId, schematicUrl, quality])
