@@ -17,6 +17,9 @@ SR_VERSION="1.1.23"
 # assign the namespace to window.THREE ourselves — the schematic-renderer
 # UMD (which marks `three` as external) then picks it up there.
 THREE_URL="https://unpkg.com/three@${THREE_VERSION}/build/three.module.min.js"
+# three.module.min.js re-exports from three.core.min.js — fetch both or the
+# browser will 404 on the import statement.
+THREE_CORE_URL="https://unpkg.com/three@${THREE_VERSION}/build/three.core.min.js"
 SR_URL="https://unpkg.com/schematic-renderer@${SR_VERSION}/dist/schematic-renderer.umd.js"
 
 download_if_missing() {
@@ -33,6 +36,7 @@ download_if_missing() {
 
 echo "Hydrating $VENDOR_DIR ..."
 download_if_missing "$VENDOR_DIR/three.module.min.js"       "$THREE_URL"
+download_if_missing "$VENDOR_DIR/three.core.min.js"         "$THREE_CORE_URL"
 download_if_missing "$VENDOR_DIR/schematic-renderer.umd.js" "$SR_URL"
 
 # Copy the resource pack (textures + models) from the vendored source tree.
