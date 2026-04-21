@@ -29,17 +29,22 @@ Then open http://localhost:3000.
 
 ### Supabase schema
 
-Two migrations live under `supabase/migrations/`:
+The remote project was bootstrapped through the Supabase Dashboard, so its
+baseline (`initial_schema`, `admin_users_self_read`, `door_size_free_form`,
+`storage_admin_policies`, `schematics_bucket_public`) isn't in this repo.
+The only locally-tracked migration is:
 
-- `0001_doors.sql` — initial table, RLS, and `schematics` storage bucket.
-- `0002_doors_refactor.sql` — adds `slug`, `door_size`, `block_count`,
-  `bounds_*`, `thumbnail_url`, `sort_order` columns, a `door_files` table,
-  and a `gen_random_uuid()` default for `doors.id`. Idempotent.
+- `supabase/migrations/20260421152421_open_uploads_to_all_users.sql` —
+  adds `doors.owner_id`, swaps admin-only RLS for owner-based writes
+  (with `admin_users` kept as a moderator override), and points storage
+  inserts at `{auth.uid()}/...` path prefixes.
 
-With the project linked (`bun run db:link` after editing the ref in
-`package.json`):
+To push against a fresh clone:
 
 ```bash
+bunx supabase link --project-ref <your ref>
+bunx supabase migration repair --status applied \
+  00001 00002 00003 00004 20260417033136
 bun run db:push
 ```
 

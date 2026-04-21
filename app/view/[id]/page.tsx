@@ -26,31 +26,13 @@ type ResolvedFile = {
   file_name: string
 }
 
-// Combine the new door_files relation with the legacy `doors.files` jsonb so
-// pre-refactor rows still render. Rows from door_files take precedence when
-// both exist for the same format.
 function resolveFiles(door: DoorWithFiles): ResolvedFile[] {
-  const resolved: ResolvedFile[] = door.door_files.map((f) => ({
+  return door.door_files.map((f) => ({
     id: f.id,
     format: f.format,
     url: schematicPublicUrl(f.storage_path),
     file_name: f.file_name,
   }))
-  const covered = new Set(resolved.map((r) => r.format))
-  const legacy = door.files ?? null
-  if (legacy) {
-    for (const [key, url] of Object.entries(legacy)) {
-      const format = key as DoorFileFormat
-      if (!url || covered.has(format)) continue
-      resolved.push({
-        id: `legacy:${format}`,
-        format,
-        url,
-        file_name: `${door.id}.${format}`,
-      })
-    }
-  }
-  return resolved
 }
 
 function youtubeEmbed(url: string | null): string | null {

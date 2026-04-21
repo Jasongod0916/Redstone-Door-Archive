@@ -33,11 +33,4 @@ export type Door = {
   updated_at: string
 }
 
-// Legacy jsonb shape from migration 0001 — maps format → public URL. Kept
-// readable as a read-side fallback so pre-refactor doors still render.
-export type LegacyFiles = Partial<Record<DoorFileFormat, string>>
-
-export type DoorWithFiles = Door & {
-  door_files: DoorFile[]
-  files?: LegacyFiles | null
-}
+export type DoorWithFiles = Door & { door_files: DoorFile[] }

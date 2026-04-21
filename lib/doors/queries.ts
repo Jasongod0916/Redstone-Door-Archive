@@ -37,9 +37,6 @@ export async function listDoors(opts: DoorsListOptions = {}): Promise<Door[]> {
 
 export async function getDoor(id: string): Promise<DoorWithFiles | null> {
   const supabase = await createClient()
-  // `*` picks up the legacy `files` jsonb (migration 0001) alongside
-  // everything else; older rows store their schematic URLs there and the
-  // view page falls back to it when door_files has no rows.
   const { data, error } = await supabase
     .from('doors')
     .select('*, door_files(*)')
