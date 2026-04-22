@@ -32,12 +32,18 @@ Then open http://localhost:3000.
 The remote project was bootstrapped through the Supabase Dashboard, so its
 baseline (`initial_schema`, `admin_users_self_read`, `door_size_free_form`,
 `storage_admin_policies`, `schematics_bucket_public`) isn't in this repo.
-The only locally-tracked migration is:
+Locally-tracked migrations:
 
 - `supabase/migrations/20260421152421_open_uploads_to_all_users.sql` —
   adds `doors.owner_id`, swaps admin-only RLS for owner-based writes
   (with `admin_users` kept as a moderator override), and points storage
   inserts at `{auth.uid()}/...` path prefixes.
+- `supabase/migrations/20260422071358_admin_moderation.sql` —
+  Phase 0/1 admin moderation. Adds `doors.deleted_at` / `deleted_by`
+  for soft delete, the `admin_audit_log` table, the
+  `admin_users_with_email` SECURITY DEFINER view, and the
+  `bootstrap_admin(text)` RPC used by the admin UI to mint the first
+  admin from an env var.
 
 To push against a fresh clone:
 
@@ -67,6 +73,48 @@ bun run db:push
 | `bunx tsc --noEmit` | Typecheck |
 | `bun run setup:vendor` | Hydrate `public/vendor/` |
 | `bun run db:push` | Apply migrations to the linked Supabase project |
+
+## Admin
+
+The project has an admin interface at `/admin` for content moderation. Admin
+membership lives in the `public.admin_users` table; existing RLS already gives
+its members an override on `doors`, `door_files`, and the `schematics` storage
+bucket.
+
+### Bootstrap the first admin
+
+Set the email of the account that should become admin in `.env.local`:
+
+```
+ADMIN_BOOTSTRAP_EMAIL=you@example.com
+```
+
+Sign in normally. The first time that email hits `/admin` while `admin_users`
+is empty, the `bootstrap_admin()` RPC inserts the row automatically. Once the
+table has any entry the RPC is one-shot — rotate or unset the env var
+afterwards. Future admins will be managed through the UI in Phase 2.
+
+Non-admins that reach `/admin/**` get a 404 (not 403) to avoid revealing the
+route.
+
+### What admins can do
+
+- `/admin` — dashboard with counts (live / including trash / last-7-days
+  uploads) and the ten most recent audit entries.
+- `/admin/doors` — list every door (with an "Include deleted" toggle). Edit
+  text metadata on any row, soft-delete any row.
+- `/admin/doors/[id]/edit` — edit `title`, `author`, `description`, `tags`,
+  `minecraft_version`, `door_size`, ticks, bounds, `block_count`, `video_url`.
+  File attachments (schematics, thumbnails) are **not** admin-editable by
+  design — ask the author to re-upload.
+- `/admin/trash` — restore soft-deleted doors or delete them permanently.
+  Permanent delete removes the `schematics/{ownerId}/{doorId}/*` storage
+  objects and cannot be undone.
+- `/admin/audit` — append-only log of every admin action (`door.update`,
+  `door.soft_delete`, `door.restore`, `door.hard_delete`,
+  `door.hard_delete_failed`) with filters by action and actor and cursor
+  pagination. `door.update` entries include a `{ before, after }` diff of
+  only the fields that changed.
 
 ## Architecture highlights
 

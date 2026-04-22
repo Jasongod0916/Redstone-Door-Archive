@@ -40,6 +40,11 @@ Next.js App Router app archiving Minecraft redstone doors. Public catalog; sign-
 | `/upload` | Server Component + Server Action | Auth-gated upload. Page re-checks `supabase.auth.getUser()` on entry; `app/upload/actions.ts` re-checks again inside the action (proxy doesn't cover Server Actions). Door size is two numeric inputs `[w] x [h]`. |
 | `/auth/login` | Server Component | Email+password; two submit buttons route to `signInAction` / `signUpAction` via `formAction`. Reads `?next=` to round-trip after login. |
 | `/auth/callback` | Route Handler | OAuth / magic-link code exchange. |
+| `/admin` | Server Component | Admin dashboard (stats + recent audit). Requires membership in `admin_users`; 404s otherwise. Gated by `lib/admin/guard.ts#requireAdmin` in the layout. |
+| `/admin/doors` | Server Component | All-doors moderation list (includes soft-deleted when `?deleted=1`). Soft-delete from here. |
+| `/admin/doors/[id]/edit` | Server Component + Server Action | Text-metadata edit only (`updateDoorMeta` in `app/admin/_actions/doors.ts`). File attachments are not admin-editable by design. |
+| `/admin/trash` | Server Component | Soft-deleted doors. `restoreDoor` + `hardDeleteDoor` live in `app/admin/_actions/doors.ts`; hard delete removes storage files and cannot be undone. |
+| `/admin/audit` | Server Component | Append-only admin audit log viewer with filters + cursor pagination. |
 
 ### Data & auth boundary
 
@@ -47,15 +52,26 @@ Next.js App Router app archiving Minecraft redstone doors. Public catalog; sign-
 - **`lib/supabase/server.ts`** — `createClient()` for Server Components, Server Actions, Route Handlers. Uses `next/headers` cookies (async).
 - **`lib/supabase/client.ts`** — browser `createBrowserClient`. Only in Client Components.
 - **`lib/supabase/middleware.ts`** — proxy helper only. Returns `{ response, user }`; `proxy.ts` decides whether to redirect.
-- **Server Action auth note**: Next 16 proxy does **not** cover Server Actions. Every mutating action must re-verify `auth.getUser()` itself. See `app/upload/actions.ts`.
+- **Server Action auth note**: Next 16 proxy does **not** cover Server Actions. Every mutating action must re-verify `auth.getUser()` itself. See `app/upload/actions.ts`. Admin actions use `lib/admin/guard.ts#requireAdmin()` for the equivalent re-check.
+
+### Admin role
+
+- `public.admin_users(user_id uuid)` is the single source of truth for admin membership. Existing RLS on `doors` / `door_files` / `storage.objects` grants admins an override via `auth.uid() in (select user_id from public.admin_users)`.
+- `lib/admin/guard.ts#requireAdmin()` is the gate. Every Server Component under `app/admin/**` and every Server Action in `app/admin/_actions/**` MUST call it first — 404s for non-admins (not 403; don't leak that `/admin` exists).
+- **Bootstrap**: `admin_users` has no INSERT policy for authenticated users, so the first admin is minted via the `public.bootstrap_admin(text)` SECURITY DEFINER RPC. If `admin_users` is empty and the caller's `auth.users.email` matches `process.env.ADMIN_BOOTSTRAP_EMAIL` (case-insensitive, trimmed), the RPC inserts them. Once the table has any row, the RPC always returns false. Phase 2 will add a UI to manage admins.
+- `public.admin_audit_log` is append-only (RLS admin-read / admin-insert, no update / delete). All admin mutations call `lib/admin/audit.ts#logAdminAction`. For `door.update`, `details` stores a `{ before, after }` diff of only changed fields.
+- Soft-deleted doors (`deleted_at is not null`) are hidden from non-admins via the `doors_select_public` policy; admins see everything.
+- `public.admin_users_with_email` is a SECURITY DEFINER view exposing `(user_id, email)` to admin callers only — used to render actor emails in the audit and trash pages without needing a service-role client.
 
 ### Supabase schema
 
-Migration lives at `supabase/migrations/0001_doors.sql` — apply with `supabase db push` when the project is linked.
+Tracked migrations in `supabase/migrations/`. The initial `doors` schema and `admin_users` baseline were applied on the remote dashboard before this repo started tracking migrations — see the note in `20260421152421_open_uploads_to_all_users.sql` for the `supabase migration repair` invocation you need to realign a fresh clone. Apply newer migrations with `supabase db push` when the project is linked, or via the Supabase MCP `apply_migration`.
 
-- Table `public.doors` mirrors the old `doors.json` shape (flat columns: `door_width` / `door_height` ints replacing the `"3x3"` string, plus `non_air_blocks`, `bbox_w/h/d`, `open_ticks`, `close_ticks`, `total_ticks`, `tags text[]`, `files jsonb`). `owner_id uuid` references `auth.users`. `updated_at` trigger included.
-- Storage bucket `schematics` (public). Upload paths are scoped to the uploader: RLS requires `(storage.foldername(name))[1] = auth.uid()::text`. The upload action writes to `{userId}/{doorId}/{kind}.{ext}`.
-- RLS: public SELECT on doors; authenticated INSERT with `owner_id = auth.uid()`; owner-only UPDATE/DELETE.
+- Table `public.doors` stores one row per door. Key columns: `id uuid`, `slug text`, `title text`, `author text`, `description text`, `minecraft_version text`, `door_size text` (single `"WxH"` string — NOT split into `door_width`/`door_height`), `tags text[]`, `block_count int`, `bounds_width/height/depth int`, `open_ticks/close_ticks/total_ticks int`, `video_url text`, `thumbnail_url text`, `sort_order int`, `owner_id uuid` (FK auth.users), `deleted_at timestamptz`, `deleted_by uuid` (FK auth.users), standard `created_at` / `updated_at`.
+- Child table `public.door_files(id, door_id, format, storage_path, file_name, file_size, created_at)` — `door_id` FK is `ON DELETE CASCADE`, so hard-deleting a door wipes its file rows.
+- Table `public.admin_audit_log(id, actor_id, action, target_type, target_id, details jsonb, created_at)` — append-only, admin-only access.
+- Storage bucket `schematics` (public). Upload paths are scoped to the uploader: RLS requires `(storage.foldername(name))[1] = auth.uid()::text`, with admin override for update/delete. The upload action writes to `{userId}/{doorId}/{kind}.{ext}`.
+- RLS: public SELECT on doors hides soft-deleted from non-admins (`deleted_at is null` or caller is admin); authenticated INSERT with `owner_id = auth.uid()`; owner-or-admin UPDATE/DELETE.
 
 ### 3D viewer integration
 
