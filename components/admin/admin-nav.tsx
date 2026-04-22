@@ -16,7 +16,7 @@ const ITEMS: NavItem[] = [
   { href: '/admin/doors', label: 'Doors' },
   { href: '/admin/trash', label: 'Trash' },
   { href: '/admin/audit', label: 'Audit' },
-  { href: '#', label: 'Users', disabled: true, phase: 'Phase 2' },
+  { href: '/admin/users', label: 'Users' },
   { href: '#', label: 'Curation', disabled: true, phase: 'Phase 3' },
 ]
 
