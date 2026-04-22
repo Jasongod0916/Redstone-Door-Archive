@@ -138,14 +138,90 @@ export async function softDeleteDoor(doorId: string): Promise<ActionResult> {
   return { ok: true }
 }
 
-export async function restoreDoor(_doorId: string): Promise<ActionResult> {
-  await requireAdmin()
-  // Task 8 fills this in.
-  throw new Error('restoreDoor: not implemented')
+export async function restoreDoor(doorId: string): Promise<ActionResult> {
+  const actor = await requireAdmin()
+  const supabase = await createClient()
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from('doors')
+    .select('id, deleted_at')
+    .eq('id', doorId)
+    .maybeSingle()
+  if (fetchErr) return { ok: false, error: fetchErr.message }
+  if (!existing) return { ok: false, error: 'not_found' }
+  if (!existing.deleted_at) return { ok: false, error: 'not_deleted' }
+
+  const { error: updateErr } = await supabase
+    .from('doors')
+    .update({ deleted_at: null, deleted_by: null })
+    .eq('id', doorId)
+  if (updateErr) return { ok: false, error: updateErr.message }
+
+  await logAdminAction({
+    actor, action: 'door.restore', targetType: 'door', targetId: doorId,
+  })
+
+  revalidatePath('/admin/doors')
+  revalidatePath('/admin/trash')
+  revalidatePath(`/view/${doorId}`)
+  revalidatePath('/')
+  return { ok: true }
 }
 
-export async function hardDeleteDoor(_doorId: string): Promise<ActionResult> {
-  await requireAdmin()
-  // Task 8 fills this in.
-  throw new Error('hardDeleteDoor: not implemented')
+export async function hardDeleteDoor(doorId: string): Promise<ActionResult> {
+  const actor = await requireAdmin()
+  const supabase = await createClient()
+
+  // Gate: must already be soft-deleted. UI only shows this on Trash page,
+  // but we enforce on the server too.
+  const { data: existing, error: fetchErr } = await supabase
+    .from('doors')
+    .select('id, owner_id, deleted_at, thumbnail_url')
+    .eq('id', doorId)
+    .maybeSingle()
+  if (fetchErr) return { ok: false, error: fetchErr.message }
+  if (!existing) return { ok: false, error: 'not_found' }
+  if (!existing.deleted_at) return { ok: false, error: 'not_trashed' }
+
+  // Collect storage paths to remove.
+  const { data: files } = await supabase
+    .from('door_files')
+    .select('storage_path')
+    .eq('door_id', doorId)
+  const paths: string[] = []
+  for (const f of files ?? []) {
+    if (f.storage_path) paths.push(f.storage_path)
+  }
+  // Try to remove storage first. If owner_id is known and files are under that
+  // prefix, RLS will let admin_users delete (per migration policy).
+  if (paths.length > 0) {
+    const { error: removeErr } = await supabase.storage.from('schematics').remove(paths)
+    if (removeErr) {
+      await logAdminAction({
+        actor, action: 'door.hard_delete_failed', targetType: 'door', targetId: doorId,
+        details: { stage: 'storage', error: removeErr.message, paths },
+      })
+      return { ok: false, error: `storage_failed: ${removeErr.message}` }
+    }
+  }
+
+  // Now delete the DB row. door_files is expected to cascade via FK.
+  const { error: deleteErr } = await supabase.from('doors').delete().eq('id', doorId)
+  if (deleteErr) {
+    await logAdminAction({
+      actor, action: 'door.hard_delete_failed', targetType: 'door', targetId: doorId,
+      details: { stage: 'db', error: deleteErr.message },
+    })
+    return { ok: false, error: deleteErr.message }
+  }
+
+  await logAdminAction({
+    actor, action: 'door.hard_delete', targetType: 'door', targetId: doorId,
+    details: { filesRemoved: paths.length },
+  })
+
+  revalidatePath('/admin/trash')
+  revalidatePath('/admin/doors')
+  revalidatePath('/')
+  return { ok: true }
 }
