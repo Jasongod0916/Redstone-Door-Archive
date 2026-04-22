@@ -12,8 +12,9 @@ export type AuditAction =
   | 'door.feature'
   | 'door.unfeature'
   | 'door.reorder'
+  | 'storage.orphan_cleanup'
 
-export type AuditTargetType = 'door' | 'user'
+export type AuditTargetType = 'door' | 'user' | 'storage'
 
 export type LogAdminActionInput = {
   actor: AdminUser
