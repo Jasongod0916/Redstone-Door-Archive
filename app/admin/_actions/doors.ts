@@ -30,10 +30,34 @@ export async function updateDoorMeta(
   throw new Error('updateDoorMeta: not implemented')
 }
 
-export async function softDeleteDoor(_doorId: string): Promise<ActionResult> {
-  await requireAdmin()
-  // Task 6 fills this in.
-  throw new Error('softDeleteDoor: not implemented')
+export async function softDeleteDoor(doorId: string): Promise<ActionResult> {
+  const actor = await requireAdmin()
+  const supabase = await createClient()
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from('doors')
+    .select('id, deleted_at')
+    .eq('id', doorId)
+    .maybeSingle()
+  if (fetchErr) return { ok: false, error: fetchErr.message }
+  if (!existing) return { ok: false, error: 'not_found' }
+  if (existing.deleted_at) return { ok: false, error: 'already_deleted' }
+
+  const { error: updateErr } = await supabase
+    .from('doors')
+    .update({ deleted_at: new Date().toISOString(), deleted_by: actor.id })
+    .eq('id', doorId)
+  if (updateErr) return { ok: false, error: updateErr.message }
+
+  await logAdminAction({
+    actor, action: 'door.soft_delete', targetType: 'door', targetId: doorId,
+  })
+
+  revalidatePath('/admin/doors')
+  revalidatePath('/admin/trash')
+  revalidatePath(`/view/${doorId}`)
+  revalidatePath('/')
+  return { ok: true }
 }
 
 export async function restoreDoor(_doorId: string): Promise<ActionResult> {
