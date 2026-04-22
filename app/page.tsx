@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { listAvailableSizes, listDoors } from '@/lib/doors/queries'
+import { listAvailableSizes, listDoors, listFeaturedForPublic } from '@/lib/doors/queries'
 import { createClient } from '@/lib/supabase/server'
 import { signOutAction } from '@/app/auth/actions'
 
@@ -27,8 +27,17 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  const hasFilter = !!sizeParam || !!search || sort !== 'recent'
+  const featured = hasFilter ? [] : await listFeaturedForPublic()
+  const excludeIds = featured.map((d) => d.id)
+
   const [doors, sizes] = await Promise.all([
-    listDoors({ size: sizeParam, sort, search: search || undefined }),
+    listDoors({
+      size: sizeParam,
+      sort,
+      search: search || undefined,
+      excludeIds: excludeIds.length > 0 ? excludeIds : undefined,
+    }),
     listAvailableSizes(),
   ])
 
@@ -135,6 +144,17 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           })}
         </div>
       </section>
+
+      {featured.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-sm tracking-widest uppercase text-muted-foreground">Featured</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {featured.map((door) => (
+              <DoorCard key={door.id} door={door} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* Grid */}
       <section className="flex flex-col gap-3">

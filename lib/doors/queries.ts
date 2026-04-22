@@ -5,6 +5,7 @@ export type DoorsListOptions = {
   size?: string
   sort?: 'recent' | 'blocks' | 'ticks'
   search?: string
+  excludeIds?: string[]
 }
 
 export async function listDoors(opts: DoorsListOptions = {}): Promise<Door[]> {
@@ -16,6 +17,10 @@ export async function listDoors(opts: DoorsListOptions = {}): Promise<Door[]> {
   if (opts.search) {
     const term = `%${opts.search}%`
     q = q.or(`title.ilike.${term},author.ilike.${term},description.ilike.${term}`)
+  }
+
+  if (opts.excludeIds && opts.excludeIds.length > 0) {
+    q = q.not('id', 'in', `(${opts.excludeIds.join(',')})`)
   }
 
   switch (opts.sort) {
@@ -61,4 +66,17 @@ export async function listAvailableSizes(): Promise<Array<{ size: string; count:
       const [bw, bh] = b.size.split('x').map(Number)
       return aw - bw || ah - bh
     })
+}
+
+export async function listFeaturedForPublic(): Promise<Door[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('doors')
+    .select('*')
+    .eq('is_featured', true)
+    .is('deleted_at', null)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as Door[]
 }
