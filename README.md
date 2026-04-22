@@ -100,8 +100,10 @@ route.
 
 ### What admins can do
 
-- `/admin` — dashboard with counts (live / including trash / last-7-days
-  uploads) and the ten most recent audit entries.
+- `/admin` — dashboard with seven stat cards (Live doors, Including trash,
+  Last 7-day uploads, Featured, Admins, Users, Storage used), a size
+  distribution bar list, a top-5 uploaders table, and the ten most recent
+  audit entries.
 - `/admin/users` — list every registered user with their email, join date, last
   sign-in, and upload counts. Promote any user to admin, or demote any admin
   (including yourself) — the system refuses to demote the last remaining admin.
@@ -117,6 +119,10 @@ route.
 - `/admin/curation` — mark doors as featured, remove them from featured, and
   reorder with up/down arrow buttons. The order here drives the order of the
   Featured section on the public homepage.
+- `/admin/storage` — list orphan files (storage objects with no matching
+  `door_files` row) and batch-delete up to 100 per action. Each cleanup
+  writes a `storage.orphan_cleanup` audit entry including the full list
+  of deleted paths.
 - `/admin/audit` — append-only log of every admin action (`door.update`,
   `door.soft_delete`, `door.restore`, `door.hard_delete`,
   `door.hard_delete_failed`) with filters by action and actor and cursor

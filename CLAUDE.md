@@ -40,13 +40,14 @@ Next.js App Router app archiving Minecraft redstone doors. Public catalog; sign-
 | `/upload` | Server Component + Server Action | Auth-gated upload. Page re-checks `supabase.auth.getUser()` on entry; `app/upload/actions.ts` re-checks again inside the action (proxy doesn't cover Server Actions). Door size is two numeric inputs `[w] x [h]`. |
 | `/auth/login` | Server Component | Email+password; two submit buttons route to `signInAction` / `signUpAction` via `formAction`. Reads `?next=` to round-trip after login. |
 | `/auth/callback` | Route Handler | OAuth / magic-link code exchange. |
-| `/admin` | Server Component | Admin dashboard (stats + recent audit). Requires membership in `admin_users`; 404s otherwise. Gated by `lib/admin/guard.ts#requireAdmin` in the layout. |
+| `/admin` | Server Component | Admin dashboard: 7 stat cards (Live, Trash, Last 7d uploads, Featured, Admins, Users, Storage used), size distribution, top-5 uploaders, recent audit activity. Requires membership in `admin_users`; 404s otherwise. Gated by `lib/admin/guard.ts#requireAdmin` in the layout. |
 | `/admin/users` | Server Component | User & permission management. Admin-only listing of all registered users (`admin_users_list` view) with inline promote/demote. Last admin cannot be demoted. |
 | `/admin/doors` | Server Component | All-doors moderation list (includes soft-deleted when `?deleted=1`). Soft-delete from here. |
 | `/admin/doors/[id]/edit` | Server Component + Server Action | Text-metadata edit only (`updateDoorMeta` in `app/admin/_actions/doors.ts`). File attachments are not admin-editable by design. |
 | `/admin/trash` | Server Component | Soft-deleted doors. `restoreDoor` + `hardDeleteDoor` live in `app/admin/_actions/doors.ts`; hard delete removes storage files and cannot be undone. |
 | `/admin/audit` | Server Component | Append-only admin audit log viewer with filters + cursor pagination. |
 | `/admin/curation` | Server Component | Mark any door `is_featured`, unfeature, and reorder with up/down arrow buttons. Atomic swap via `swap_featured_sort_order` RPC. |
+| `/admin/storage` | Server Component | Storage ops: list orphan files (`storage.objects` with no matching `door_files.storage_path` via `list_storage_orphans` RPC) and batch-delete up to 100 at a time. |
 
 ### Data & auth boundary
 
@@ -69,6 +70,9 @@ Next.js App Router app archiving Minecraft redstone doors. Public catalog; sign-
 - **`admin_users.user_id` FK cascades** on `auth.users` delete — deleting a user automatically removes their admin membership, rather than blocking the delete.
 - **Curation lives on `doors` itself**, not a separate table. `doors.is_featured boolean` flags a door for homepage promotion; `doors.sort_order int` (dormant before Phase 3) is the relative order among featured doors, ascending. Partial index `doors_featured_idx` covers `(sort_order, created_at desc) WHERE is_featured = true AND deleted_at IS NULL` for fast public lookup.
 - **Admin reorder goes through `public.swap_featured_sort_order(uuid, uuid)`** — a SECURITY DEFINER RPC that locks both rows (`FOR UPDATE`) and swaps their `sort_order`. Raises `not_admin` / `not_featured` on misuse. The server actions find the immediate up/down neighbor and call swap; boundary presses (first row ↑, last row ↓) are UI-disabled AND action-level no-ops (no audit entry).
+- **Ops dashboard lives at `/admin`** — seven stat cards (Live / Trash / Last 7d / Featured / Admins / Users / Storage used), a size-distribution bar list, a top-5 uploaders table, plus the existing 10-item recent audit feed. All driven by `getExtendedDashboardStats` / `getSizeDistribution` / `getTopUploaders` in `lib/admin/queries.ts`.
+- **Orphan storage cleanup**: `public.list_storage_orphans()` is a SECURITY DEFINER RPC that returns storage objects under the `schematics` bucket with no corresponding `door_files.storage_path`. The `/admin/storage` page renders the list; the `cleanupOrphans` Server Action calls `supabase.storage.from('schematics').remove(paths)` (capped at 100 paths per call) and writes a `storage.orphan_cleanup` audit row. Reverse orphans (`door_files` pointing to missing storage objects) are out of scope.
+- **`lib/admin/format.ts` exports `formatBytes(n)`** — the single byte-formatter used by the Storage used stat card and the orphan list. Thresholds: B → KB → MB → GB.
 
 ### Supabase schema
 
