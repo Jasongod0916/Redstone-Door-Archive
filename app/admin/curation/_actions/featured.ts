@@ -21,11 +21,14 @@ export async function featureDoor(doorId: string): Promise<ActionResult> {
   if (maxErr) return { ok: false, error: maxErr.message }
   const nextSort = ((maxRow?.sort_order as number | null | undefined) ?? 0) + 10
 
-  const { error: updateErr } = await supabase
+  const { data: updated, error: updateErr } = await supabase
     .from('doors')
     .update({ is_featured: true, sort_order: nextSort })
     .eq('id', doorId)
+    .is('deleted_at', null)
+    .select('id')
   if (updateErr) return { ok: false, error: updateErr.message }
+  if (!updated || updated.length === 0) return { ok: false, error: 'not_found_or_deleted' }
 
   await logAdminAction({
     actor, action: 'door.feature', targetType: 'door', targetId: doorId,

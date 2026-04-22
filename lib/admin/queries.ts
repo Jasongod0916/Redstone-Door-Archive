@@ -50,7 +50,9 @@ export async function getAdminDoor(id: string): Promise<AdminDoorRow | null> {
 
 export type AdminAuditRow = {
   id: string
-  actor_id: string
+  // actor_id FK is ON DELETE SET NULL (see 20260422071358_admin_moderation.sql);
+  // once a user is deleted their historical audit rows survive with actor_id=null.
+  actor_id: string | null
   actor_email: string | null
   action: string
   target_type: string
@@ -87,7 +89,7 @@ export async function listAuditLog(opts: ListAuditLogOptions = {}): Promise<Admi
   return (data ?? []).map((r) => ({
     id: r.id,
     actor_id: r.actor_id,
-    actor_email: emailByUserId.get(r.actor_id) ?? null,
+    actor_email: r.actor_id ? (emailByUserId.get(r.actor_id) ?? null) : null,
     action: r.action,
     target_type: r.target_type,
     target_id: r.target_id,

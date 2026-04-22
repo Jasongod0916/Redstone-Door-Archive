@@ -50,7 +50,7 @@ export default async function AdminAuditPage({ searchParams }: { searchParams: S
                 <td className="p-3 text-xs tabular-nums text-muted-foreground">
                   {new Date(r.created_at).toISOString().slice(0, 19).replace('T', ' ')}
                 </td>
-                <td className="p-3 text-xs">{r.actor_email ?? r.actor_id}</td>
+                <td className="p-3 text-xs">{r.actor_email ?? r.actor_id ?? <span className="text-muted-foreground italic">deleted user</span>}</td>
                 <td className="p-3"><span className="text-primary">{r.action}</span></td>
                 <td className="p-3 text-xs">{r.target_type}: {r.target_id ? <Link href={`/admin/doors/${r.target_id}/edit`} className="underline hover:text-primary">{r.target_id}</Link> : '—'}</td>
                 <td className="p-3"><AuditDetails details={r.details} /></td>

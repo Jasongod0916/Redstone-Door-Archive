@@ -107,7 +107,7 @@ export default async function AdminDashboardPage() {
                 <span className="text-muted-foreground tabular-nums">
                   {new Date(r.created_at).toISOString().slice(0, 19).replace('T', ' ')}
                 </span>
-                <span className="text-foreground">{r.actor_email ?? r.actor_id}</span>
+                <span className="text-foreground">{r.actor_email ?? r.actor_id ?? <span className="italic text-muted-foreground">deleted user</span>}</span>
                 <span className="text-primary">{r.action}</span>
                 <span className="text-muted-foreground">
                   {r.target_type}:{r.target_id ?? '—'}
