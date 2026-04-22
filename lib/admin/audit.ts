@@ -7,6 +7,8 @@ export type AuditAction =
   | 'door.restore'
   | 'door.hard_delete'
   | 'door.hard_delete_failed'
+  | 'admin.promote'
+  | 'admin.demote'
 
 export type AuditTargetType = 'door' | 'user'
 

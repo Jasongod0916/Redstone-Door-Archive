@@ -130,3 +130,40 @@ export async function listAdminEmails(): Promise<Array<{ user_id: string; email:
   if (error) throw error
   return (data ?? []) as Array<{ user_id: string; email: string | null }>
 }
+
+export type UserStats = {
+  user_id: string
+  email: string | null
+  created_at: string
+  last_sign_in_at: string | null
+  banned_until: string | null
+  live_doors: number
+  deleted_doors: number
+  is_admin: boolean
+}
+
+export type ListUsersWithStatsOptions = {
+  search?: string
+  role?: 'all' | 'admins' | 'non_admins'
+}
+
+export async function listUsersWithStats(
+  opts: ListUsersWithStatsOptions = {},
+): Promise<UserStats[]> {
+  const supabase = await createClient()
+  let q = supabase.from('admin_users_list').select('*')
+
+  if (opts.search) {
+    const term = `%${opts.search}%`
+    q = q.ilike('email', term)
+  }
+
+  if (opts.role === 'admins') q = q.eq('is_admin', true)
+  else if (opts.role === 'non_admins') q = q.eq('is_admin', false)
+
+  q = q.order('created_at', { ascending: false })
+
+  const { data, error } = await q
+  if (error) throw error
+  return (data ?? []) as UserStats[]
+}
