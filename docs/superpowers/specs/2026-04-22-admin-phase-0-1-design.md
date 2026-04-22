@@ -188,14 +188,23 @@ Future actions (Phase 2+) will extend `action` values but not this pattern: `adm
 - Submit calls `updateDoorMeta`; success → toast + router.push(`/admin/doors`)
 
 **`/admin/trash`**
-- Columns: same as `/admin/doors` plus `Deleted at` and `Deleted by` (admin email, joined from `auth.users`)
+- Columns: same as `/admin/doors` plus `Deleted at` and `Deleted by` (admin email — see "Resolving admin emails" below)
 - Row actions: `Restore` and `Delete permanently`
 - `Delete permanently` opens a second `AlertDialog` with copy: "This removes the schematic, thumbnail, and video files from storage. This cannot be undone."
 
 **`/admin/audit`**
-- Columns: Time · Actor (email) · Action · Target · Details (collapsible JSON viewer)
+- Columns: Time · Actor (email — see "Resolving admin emails" below) · Action · Target · Details (collapsible JSON viewer)
 - Filters: action dropdown, actor dropdown (from distinct admin users). Date-range filter deferred.
 - Pagination: 50 rows per page, cursor-based on `created_at`
+
+### Resolving admin emails
+
+`auth.users` is not readable from a regular authenticated Supabase client. Two acceptable paths — implementer picks based on complexity tolerance:
+
+1. **Preferred: a SECURITY DEFINER view or function** owned by `postgres` that exposes `(user_id, email)` only for users present in `admin_users`, guarded by an RLS-equivalent check inside the function body. Created as part of the same migration. Keeps everything within the anon-key client.
+2. **Fallback: service-role client** in a Server Component / Server Action only, calling `supabase.auth.admin.listUsers()` or `getUserById()`. Requires `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` and `lib/supabase/service.ts` (new file). Never exposed to the browser.
+
+Pick path 1 unless there is a concrete reason not to; it keeps the service role out of the codebase.
 
 ## Error handling & edge cases
 
