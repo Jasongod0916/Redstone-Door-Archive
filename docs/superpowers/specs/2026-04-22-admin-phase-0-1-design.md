@@ -76,8 +76,10 @@ app/admin/_actions/
 
 1. `const { data: { user } } = await supabase.auth.getUser()`. If null → redirect to `/auth/login?next=<current>`.
 2. `select user_id from admin_users where user_id = user.id limit 1`. If found → return user.
-3. Bootstrap path: if `admin_users` is **empty** AND `user.email === process.env.ADMIN_BOOTSTRAP_EMAIL` (case-insensitive, trimmed) → `insert into admin_users (user_id) values (user.id)`, then return user.
+3. Bootstrap path: call the `public.bootstrap_admin(bootstrap_email)` RPC with `process.env.ADMIN_BOOTSTRAP_EMAIL`. If it returns `true` → return user.
 4. Otherwise → `notFound()` (404). 403 would reveal that `/admin` exists.
+
+`admin_users` RLS has no INSERT policy for authenticated users; the only way to add a row is through `public.bootstrap_admin`, a SECURITY DEFINER function that server-side re-verifies (a) the caller is signed in, (b) the caller's `auth.users.email` matches the supplied argument, and (c) `admin_users` is empty. This guarantees the env-var value alone cannot authorize a promotion — the caller must also be signed in as that email.
 
 Bootstrap is intentionally one-shot: once the table has any row, step 3 can never fire again. Rotating the env var later has no effect; subsequent admins will be added via Phase 2's UI.
 
@@ -155,11 +157,13 @@ The `deleted_at is not null` guard on `hardDeleteDoor` is a server-side safety r
 
 ```
 title, author, description, tags, minecraft_version, door_size,
-door_width, door_height, block_count, open_ticks, close_ticks, total_ticks,
+block_count, open_ticks, close_ticks, total_ticks,
 bounds_width, bounds_height, bounds_depth, video_url
 ```
 
 NOT editable by admin: `id`, `slug`, `owner_id`, `thumbnail_url`, `sort_order` (Phase 3), `created_at`, `updated_at`, `deleted_at`, `deleted_by`, the `door_files` child table.
+
+> `doors` has no `door_width` / `door_height` columns — only the single text column `door_size` (e.g. `"3x3"`). The upload action composes the string from two numeric inputs, but the admin edit form uses a single text field to match the stored shape.
 
 ### Audit `details` conventions
 
