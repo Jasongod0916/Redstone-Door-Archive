@@ -16,6 +16,7 @@ const ITEMS: NavItem[] = [
   { href: '/admin/doors', label: 'Doors' },
   { href: '/admin/trash', label: 'Trash' },
   { href: '/admin/audit', label: 'Audit' },
+  { href: '/admin/storage', label: 'Storage' },
   { href: '/admin/users', label: 'Users' },
   { href: '/admin/curation', label: 'Curation' },
 ]
