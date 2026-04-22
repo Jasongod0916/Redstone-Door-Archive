@@ -9,6 +9,9 @@ export type AuditAction =
   | 'door.hard_delete_failed'
   | 'admin.promote'
   | 'admin.demote'
+  | 'door.feature'
+  | 'door.unfeature'
+  | 'door.reorder'
 
 export type AuditTargetType = 'door' | 'user'
 

@@ -29,6 +29,7 @@ export type Door = {
   video_url: string | null
   thumbnail_url: string | null
   sort_order: number
+  is_featured: boolean
   created_at: string
   updated_at: string
 }

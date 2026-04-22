@@ -167,3 +167,45 @@ export async function listUsersWithStats(
   if (error) throw error
   return (data ?? []) as UserStats[]
 }
+
+export type FeaturedDoorRow = AdminDoorRow
+
+export async function listFeaturedForAdmin(): Promise<FeaturedDoorRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('doors')
+    .select('*')
+    .eq('is_featured', true)
+    .is('deleted_at', null)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as FeaturedDoorRow[]
+}
+
+export type ListAddableDoorsOptions = {
+  search?: string
+  limit?: number
+}
+
+export async function listAddableDoors(
+  opts: ListAddableDoorsOptions = {},
+): Promise<FeaturedDoorRow[]> {
+  const supabase = await createClient()
+  let q = supabase
+    .from('doors')
+    .select('*')
+    .eq('is_featured', false)
+    .is('deleted_at', null)
+
+  if (opts.search) {
+    const term = `%${opts.search}%`
+    q = q.or(`title.ilike.${term},author.ilike.${term}`)
+  }
+
+  q = q.order('created_at', { ascending: false }).limit(opts.limit ?? 20)
+
+  const { data, error } = await q
+  if (error) throw error
+  return (data ?? []) as FeaturedDoorRow[]
+}
