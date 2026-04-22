@@ -114,6 +114,9 @@ route.
 - `/admin/trash` — restore soft-deleted doors or delete them permanently.
   Permanent delete removes the `schematics/{ownerId}/{doorId}/*` storage
   objects and cannot be undone.
+- `/admin/curation` — mark doors as featured, remove them from featured, and
+  reorder with up/down arrow buttons. The order here drives the order of the
+  Featured section on the public homepage.
 - `/admin/audit` — append-only log of every admin action (`door.update`,
   `door.soft_delete`, `door.restore`, `door.hard_delete`,
   `door.hard_delete_failed`) with filters by action and actor and cursor
@@ -122,6 +125,12 @@ route.
 
 ## Architecture highlights
 
+- The public homepage shows an admin-curated **Featured** row above the main
+  catalog grid, but **only** when the visitor has no filter active (no size
+  pill, no search, default sort). The moment a filter is applied, Featured
+  disappears and the grid shows all matching doors — featured or not. Featured
+  doors are excluded from the main grid when the section is visible, so a
+  featured door never appears twice on the page.
 - `proxy.ts` replaces Next 12's `middleware.ts` (renamed in Next 16). It
   refreshes Supabase sessions on every request and only redirects
   `/upload` and `/admin` when there's no user.

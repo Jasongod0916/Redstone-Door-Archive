@@ -35,7 +35,7 @@ Next.js App Router app archiving Minecraft redstone doors. Public catalog; sign-
 
 | Route | Kind | Purpose |
 |---|---|---|
-| `/` | Server Component | Catalog. Size pill filter, sort dropdown (`recent` / `blocks` / `ticks`), text search via `searchParams`. |
+| `/` | Server Component | Catalog. Size pill filter, sort dropdown (`recent` / `blocks` / `ticks`), text search via `searchParams`. Shows an admin-curated "Featured" section above the main grid **only** when no filter is active (no size, empty search, default sort); featured doors are excluded from the main grid to avoid duplicates. |
 | `/view/[id]` | Server Component | Door detail + 3D viewer. Imports `components/schematic-viewer-lazy` (client wrapper around `next/dynamic` with `ssr: false`). |
 | `/upload` | Server Component + Server Action | Auth-gated upload. Page re-checks `supabase.auth.getUser()` on entry; `app/upload/actions.ts` re-checks again inside the action (proxy doesn't cover Server Actions). Door size is two numeric inputs `[w] x [h]`. |
 | `/auth/login` | Server Component | Email+password; two submit buttons route to `signInAction` / `signUpAction` via `formAction`. Reads `?next=` to round-trip after login. |
@@ -46,6 +46,7 @@ Next.js App Router app archiving Minecraft redstone doors. Public catalog; sign-
 | `/admin/doors/[id]/edit` | Server Component + Server Action | Text-metadata edit only (`updateDoorMeta` in `app/admin/_actions/doors.ts`). File attachments are not admin-editable by design. |
 | `/admin/trash` | Server Component | Soft-deleted doors. `restoreDoor` + `hardDeleteDoor` live in `app/admin/_actions/doors.ts`; hard delete removes storage files and cannot be undone. |
 | `/admin/audit` | Server Component | Append-only admin audit log viewer with filters + cursor pagination. |
+| `/admin/curation` | Server Component | Mark any door `is_featured`, unfeature, and reorder with up/down arrow buttons. Atomic swap via `swap_featured_sort_order` RPC. |
 
 ### Data & auth boundary
 
@@ -66,6 +67,8 @@ Next.js App Router app archiving Minecraft redstone doors. Public catalog; sign-
 - **Admin CRUD on `admin_users` goes through two SECURITY DEFINER RPCs**: `public.promote_admin(uuid)` and `public.demote_admin(uuid)`. Both reject non-admin callers (`raise exception 'not_admin'`); `demote_admin` also refuses to remove the last remaining admin (`raise exception 'last_admin'`) — this invariant is server-enforced, independent of the UI. Phase 2's `/admin/users` page is the first-class path for managing admins; `ADMIN_BOOTSTRAP_EMAIL` stays as a zero-admin recovery fallback.
 - **`public.admin_users_list` view** (SECURITY DEFINER, admin-only): one row per `auth.users` entry with join stats (`live_doors`, `deleted_doors`) and an `is_admin` flag. Consumed by `/admin/users`. Returns zero rows to non-admin callers.
 - **`admin_users.user_id` FK cascades** on `auth.users` delete — deleting a user automatically removes their admin membership, rather than blocking the delete.
+- **Curation lives on `doors` itself**, not a separate table. `doors.is_featured boolean` flags a door for homepage promotion; `doors.sort_order int` (dormant before Phase 3) is the relative order among featured doors, ascending. Partial index `doors_featured_idx` covers `(sort_order, created_at desc) WHERE is_featured = true AND deleted_at IS NULL` for fast public lookup.
+- **Admin reorder goes through `public.swap_featured_sort_order(uuid, uuid)`** — a SECURITY DEFINER RPC that locks both rows (`FOR UPDATE`) and swaps their `sort_order`. Raises `not_admin` / `not_featured` on misuse. The server actions find the immediate up/down neighbor and call swap; boundary presses (first row ↑, last row ↓) are UI-disabled AND action-level no-ops (no audit entry).
 
 ### Supabase schema
 
