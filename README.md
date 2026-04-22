@@ -91,8 +91,9 @@ ADMIN_BOOTSTRAP_EMAIL=you@example.com
 
 Sign in normally. The first time that email hits `/admin` while `admin_users`
 is empty, the `bootstrap_admin()` RPC inserts the row automatically. Once the
-table has any entry the RPC is one-shot — rotate or unset the env var
-afterwards. Future admins will be managed through the UI in Phase 2.
+table has any entry the RPC is one-shot — all subsequent admins are added
+through `/admin/users`. The env var remains as a recovery fallback if the
+`admin_users` table is ever truncated, so it's safe to keep set.
 
 Non-admins that reach `/admin/**` get a 404 (not 403) to avoid revealing the
 route.
@@ -101,6 +102,9 @@ route.
 
 - `/admin` — dashboard with counts (live / including trash / last-7-days
   uploads) and the ten most recent audit entries.
+- `/admin/users` — list every registered user with their email, join date, last
+  sign-in, and upload counts. Promote any user to admin, or demote any admin
+  (including yourself) — the system refuses to demote the last remaining admin.
 - `/admin/doors` — list every door (with an "Include deleted" toggle). Edit
   text metadata on any row, soft-delete any row.
 - `/admin/doors/[id]/edit` — edit `title`, `author`, `description`, `tags`,

@@ -41,6 +41,7 @@ Next.js App Router app archiving Minecraft redstone doors. Public catalog; sign-
 | `/auth/login` | Server Component | Email+password; two submit buttons route to `signInAction` / `signUpAction` via `formAction`. Reads `?next=` to round-trip after login. |
 | `/auth/callback` | Route Handler | OAuth / magic-link code exchange. |
 | `/admin` | Server Component | Admin dashboard (stats + recent audit). Requires membership in `admin_users`; 404s otherwise. Gated by `lib/admin/guard.ts#requireAdmin` in the layout. |
+| `/admin/users` | Server Component | User & permission management. Admin-only listing of all registered users (`admin_users_list` view) with inline promote/demote. Last admin cannot be demoted. |
 | `/admin/doors` | Server Component | All-doors moderation list (includes soft-deleted when `?deleted=1`). Soft-delete from here. |
 | `/admin/doors/[id]/edit` | Server Component + Server Action | Text-metadata edit only (`updateDoorMeta` in `app/admin/_actions/doors.ts`). File attachments are not admin-editable by design. |
 | `/admin/trash` | Server Component | Soft-deleted doors. `restoreDoor` + `hardDeleteDoor` live in `app/admin/_actions/doors.ts`; hard delete removes storage files and cannot be undone. |
@@ -62,6 +63,9 @@ Next.js App Router app archiving Minecraft redstone doors. Public catalog; sign-
 - `public.admin_audit_log` is append-only (RLS admin-read / admin-insert, no update / delete). All admin mutations call `lib/admin/audit.ts#logAdminAction`. For `door.update`, `details` stores a `{ before, after }` diff of only changed fields.
 - Soft-deleted doors (`deleted_at is not null`) are hidden from non-admins via the `doors_select_public` policy; admins see everything.
 - `public.admin_users_with_email` is a SECURITY DEFINER view exposing `(user_id, email)` to admin callers only — used to render actor emails in the audit and trash pages without needing a service-role client.
+- **Admin CRUD on `admin_users` goes through two SECURITY DEFINER RPCs**: `public.promote_admin(uuid)` and `public.demote_admin(uuid)`. Both reject non-admin callers (`raise exception 'not_admin'`); `demote_admin` also refuses to remove the last remaining admin (`raise exception 'last_admin'`) — this invariant is server-enforced, independent of the UI. Phase 2's `/admin/users` page is the first-class path for managing admins; `ADMIN_BOOTSTRAP_EMAIL` stays as a zero-admin recovery fallback.
+- **`public.admin_users_list` view** (SECURITY DEFINER, admin-only): one row per `auth.users` entry with join stats (`live_doors`, `deleted_doors`) and an `is_admin` flag. Consumed by `/admin/users`. Returns zero rows to non-admin callers.
+- **`admin_users.user_id` FK cascades** on `auth.users` delete — deleting a user automatically removes their admin membership, rather than blocking the delete.
 
 ### Supabase schema
 
