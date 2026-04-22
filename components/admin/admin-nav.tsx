@@ -17,7 +17,7 @@ const ITEMS: NavItem[] = [
   { href: '/admin/trash', label: 'Trash' },
   { href: '/admin/audit', label: 'Audit' },
   { href: '/admin/users', label: 'Users' },
-  { href: '#', label: 'Curation', disabled: true, phase: 'Phase 3' },
+  { href: '/admin/curation', label: 'Curation' },
 ]
 
 export function AdminNav() {
