@@ -21,13 +21,91 @@ type EditableField = typeof EDITABLE_FIELDS[number]
 
 export type DoorMetaUpdate = Partial<Record<EditableField, string | number | string[] | null>>
 
+type RawEditablePayload = Partial<Record<EditableField, unknown>>
+
+function coerceInt(v: unknown): number | null | undefined {
+  if (v === undefined) return undefined
+  if (v === null || v === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? Math.floor(n) : null
+}
+
+function coerceString(v: unknown): string | null | undefined {
+  if (v === undefined) return undefined
+  if (v === null) return null
+  const s = String(v).trim()
+  return s === '' ? null : s
+}
+
+function coerceTags(v: unknown): string[] | undefined {
+  if (v === undefined) return undefined
+  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean)
+  if (typeof v === 'string') return v.split(',').map((s) => s.trim()).filter(Boolean)
+  return undefined
+}
+
+function buildUpdatePatch(raw: RawEditablePayload): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  const strFields: EditableField[] = ['title', 'author', 'description', 'minecraft_version', 'door_size', 'video_url']
+  for (const k of strFields) {
+    const v = coerceString(raw[k])
+    if (v !== undefined) out[k] = v
+  }
+  const intFields: EditableField[] = ['block_count', 'open_ticks', 'close_ticks', 'total_ticks', 'bounds_width', 'bounds_height', 'bounds_depth']
+  for (const k of intFields) {
+    const v = coerceInt(raw[k])
+    if (v !== undefined) out[k] = v
+  }
+  const tags = coerceTags(raw.tags)
+  if (tags !== undefined) out.tags = tags
+  return out
+}
+
+function diffFields(before: Record<string, unknown>, patch: Record<string, unknown>): { before: Record<string, unknown>; after: Record<string, unknown> } {
+  const b: Record<string, unknown> = {}
+  const a: Record<string, unknown> = {}
+  for (const key of Object.keys(patch)) {
+    if (JSON.stringify(before[key]) !== JSON.stringify(patch[key])) {
+      b[key] = before[key] ?? null
+      a[key] = patch[key]
+    }
+  }
+  return { before: b, after: a }
+}
+
 export async function updateDoorMeta(
-  _doorId: string,
-  _fields: DoorMetaUpdate,
+  doorId: string,
+  raw: DoorMetaUpdate,
 ): Promise<ActionResult> {
-  await requireAdmin()
-  // Task 7 fills this in.
-  throw new Error('updateDoorMeta: not implemented')
+  const actor = await requireAdmin()
+  const supabase = await createClient()
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from('doors')
+    .select('*')
+    .eq('id', doorId)
+    .maybeSingle()
+  if (fetchErr) return { ok: false, error: fetchErr.message }
+  if (!existing) return { ok: false, error: 'not_found' }
+
+  const patch = buildUpdatePatch(raw as RawEditablePayload)
+  if (Object.keys(patch).length === 0) return { ok: true }
+
+  const diff = diffFields(existing as Record<string, unknown>, patch)
+  if (Object.keys(diff.after).length === 0) return { ok: true }
+
+  const { error: updateErr } = await supabase.from('doors').update(patch).eq('id', doorId)
+  if (updateErr) return { ok: false, error: updateErr.message }
+
+  await logAdminAction({
+    actor, action: 'door.update', targetType: 'door', targetId: doorId, details: diff,
+  })
+
+  revalidatePath('/admin/doors')
+  revalidatePath(`/admin/doors/${doorId}/edit`)
+  revalidatePath(`/view/${doorId}`)
+  revalidatePath('/')
+  return { ok: true }
 }
 
 export async function softDeleteDoor(doorId: string): Promise<ActionResult> {
