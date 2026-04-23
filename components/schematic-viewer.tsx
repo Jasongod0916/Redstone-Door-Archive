@@ -16,6 +16,9 @@ type SchematicRendererInstance = {
     focusOnSchematics?: () => void
     switchCameraPreset?: (preset: string) => void
   }
+  renderManager?: {
+    updateCanvasSize?: () => void
+  }
 }
 
 type SchematicRendererCtor = new (
@@ -255,6 +258,7 @@ export default function SchematicViewer({
 
     let cancelled = false
     let localInstance: SchematicRendererInstance | null = null
+    let resizeObserver: ResizeObserver | null = null
 
     const safeDispose = (instance: SchematicRendererInstance | null) => {
       if (!instance) return
@@ -319,6 +323,32 @@ export default function SchematicViewer({
         await ready
         if (cancelled) return
 
+        // RenderManager.updateCanvasSize runs once during async init; if the
+        // parent was still 0×0 at that instant (paint race, WASM hit cache,
+        // hidden ancestor) the canvas is locked to 0px and camera.aspect
+        // becomes NaN. Observe the parent first so the ResizeObserver's
+        // initial callback re-measures against current layout, and also
+        // recovers later when the parent transitions to a non-zero size.
+        const forceResize = () => {
+          try {
+            localInstance?.renderManager?.updateCanvasSize?.()
+          } catch (err) {
+            if (process.env.NODE_ENV !== 'production') {
+              console.warn('[SchematicViewer] updateCanvasSize threw', err)
+            }
+          }
+        }
+        const parent = canvas.parentElement
+        if (parent && typeof ResizeObserver !== 'undefined') {
+          resizeObserver = new ResizeObserver(() => {
+            if (cancelled) return
+            forceResize()
+          })
+          resizeObserver.observe(parent)
+        } else {
+          forceResize()
+        }
+
         // Resource pack — required for the WASM texture atlas. Without it the
         // viewer throws "<illegal path>" while building its virtual FS.
         const packBuffer = await ensureResourcePack()
@@ -347,6 +377,8 @@ export default function SchematicViewer({
 
     return () => {
       cancelled = true
+      resizeObserver?.disconnect()
+      resizeObserver = null
       safeDispose(localInstance)
       if (rendererRef.current === localInstance) rendererRef.current = null
     }
