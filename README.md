@@ -13,7 +13,7 @@ in an in-browser 3D viewer (Three.js + the `schematic-renderer` WASM bundle).
 | Styling | Tailwind v4 (no `tailwind.config`), shadcn/ui (`radix-lyra`), Phosphor icons |
 | Auth & storage | Supabase (`@supabase/ssr` cookies; RLS on `doors` + `schematics` bucket) |
 | Schematic parsing | `nbtify` server-side (`.schem` Sponge format today; `.litematic` + `.mcstructure` are stubs) |
-| 3D viewer | UMD builds of `three@0.159` + `schematic-renderer@1.1.23`, self-hosted under `public/vendor/` |
+| 3D viewer | `pack.zip` is committed under `public/vendor/`; the heavier Three.js + `schematic-renderer` bundles are hydrated into `public/vendor/` at build time |
 
 ## Getting started
 
@@ -72,7 +72,7 @@ bun run db:push
 | `bun start` | Serve the production build |
 | `bun run lint` | ESLint (flat config) |
 | `bunx tsc --noEmit` | Typecheck |
-| `bun run setup:vendor` | Hydrate `public/vendor/` |
+| `bun run setup:vendor` | Hydrate the vendored viewer scripts in `public/vendor/` |
 | `bun run db:push` | Apply migrations to the linked Supabase project |
 
 `bun run build` automatically runs `bun run setup:vendor` first, so production

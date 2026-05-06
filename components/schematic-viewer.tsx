@@ -52,6 +52,13 @@ let threeLoadPromise: Promise<void> | null = null
 let resourcePackPromise: Promise<ArrayBuffer> | null = null
 let srErrorSuppressorInstalled = false
 
+const SILENCED_SR_WARNINGS = new Set([
+  'FFmpeg not found in options',
+  'Recording will not work',
+  'using deprecated parameters for the initialization function; pass a single object instead',
+  'WARNING: Multiple instances of Three.js being imported.',
+])
+
 // schematic-renderer's dispose() aborts on a "FFmpeg not found" throw before
 // it can disconnect the canvas ResizeObserver it attached in the ctor. The
 // leaked observer then fires `updateCanvasSize` against a disposed instance
@@ -85,12 +92,33 @@ function installSrErrorSuppressor() {
   // console.error call. Filter that one exact message (we already swallow
   // the thrown Error via try/catch in safeDispose).
   const originalConsoleError = console.error.bind(console)
+  const originalConsoleWarn = console.warn.bind(console)
+  const originalConsoleGroupCollapsed = console.groupCollapsed.bind(console)
   console.error = ((...args: unknown[]) => {
     if (args.some((a) => typeof a === 'string' && a === 'FFmpeg not found')) {
       return
     }
     originalConsoleError(...args)
   }) as typeof console.error
+  console.warn = ((...args: unknown[]) => {
+    if (
+      args.some(
+        (a) =>
+          typeof a === 'string' &&
+          (SILENCED_SR_WARNINGS.has(a) ||
+            a.includes('Multiple instances of Three.js being imported')),
+      )
+    ) {
+      return
+    }
+    originalConsoleWarn(...args)
+  }) as typeof console.warn
+  console.groupCollapsed = ((...args: unknown[]) => {
+    if (args[0] === 'FFmpeg not found') {
+      return
+    }
+    originalConsoleGroupCollapsed(...args)
+  }) as typeof console.groupCollapsed
 }
 
 function ensureResourcePack(): Promise<ArrayBuffer> {
