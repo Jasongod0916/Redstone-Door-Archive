@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Door, DoorWithFiles } from '@/lib/types/door'
+import type { Door, DoorFile, DoorWithFiles } from '@/lib/types/door'
 
 export type DoorsListOptions = {
   size?: string
@@ -8,9 +8,15 @@ export type DoorsListOptions = {
   excludeIds?: string[]
 }
 
-export async function listDoors(opts: DoorsListOptions = {}): Promise<Door[]> {
+export type DoorCardRow = Door & {
+  door_files: Pick<DoorFile, 'id' | 'format' | 'storage_path' | 'file_name'>[]
+}
+
+export async function listDoors(opts: DoorsListOptions = {}): Promise<DoorCardRow[]> {
   const supabase = await createClient()
-  let q = supabase.from('doors').select('*')
+  let q = supabase
+    .from('doors')
+    .select('*, door_files(id, format, storage_path, file_name)')
 
   if (opts.size) q = q.eq('door_size', opts.size)
 
@@ -37,7 +43,7 @@ export async function listDoors(opts: DoorsListOptions = {}): Promise<Door[]> {
 
   const { data, error } = await q
   if (error) throw error
-  return (data ?? []) as Door[]
+  return (data ?? []) as DoorCardRow[]
 }
 
 export async function getDoor(id: string): Promise<DoorWithFiles | null> {
@@ -68,15 +74,15 @@ export async function listAvailableSizes(): Promise<Array<{ size: string; count:
     })
 }
 
-export async function listFeaturedForPublic(): Promise<Door[]> {
+export async function listFeaturedForPublic(): Promise<DoorCardRow[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('doors')
-    .select('*')
+    .select('*, door_files(id, format, storage_path, file_name)')
     .eq('is_featured', true)
     .is('deleted_at', null)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data ?? []) as Door[]
+  return (data ?? []) as DoorCardRow[]
 }

@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "bunx next dev",
+    "prebuild": "bun run setup:vendor",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "setup:vendor": "bash scripts/setup-vendor.sh",
+    "setup:vendor": "bun scripts/setup-vendor.mjs",
     "db:link": "bunx supabase link --project-ref mhygitjlhnyyckdnilgb",
     "db:push": "bunx supabase db push",
     "db:reset": "bunx supabase db reset",

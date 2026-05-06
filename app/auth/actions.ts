@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAppUrl } from '@/lib/app-url'
 
 function safeNext(next: FormDataEntryValue | null): string {
   if (typeof next !== 'string' || !next.startsWith('/') || next.startsWith('//')) return '/'
@@ -25,9 +26,14 @@ export async function signUpAction(formData: FormData) {
   const email = String(formData.get('email') ?? '')
   const password = String(formData.get('password') ?? '')
   const next = safeNext(formData.get('next'))
+  const emailRedirectTo = `${getAppUrl()}/auth/callback?next=${encodeURIComponent(next)}`
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signUp({ email, password })
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo },
+  })
   if (error) {
     redirect(`/auth/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`)
   }

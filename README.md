@@ -22,6 +22,7 @@ bun install
 bun run setup:vendor          # downloads Three.js + schematic-renderer UMD (~30 MB, gitignored)
 cp .env.local.example .env.local
 # fill in NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+# set APP_URL=http://localhost:3000 for local auth emails/callbacks
 bun dev
 ```
 
@@ -73,6 +74,32 @@ bun run db:push
 | `bunx tsc --noEmit` | Typecheck |
 | `bun run setup:vendor` | Hydrate `public/vendor/` |
 | `bun run db:push` | Apply migrations to the linked Supabase project |
+
+`bun run build` automatically runs `bun run setup:vendor` first, so production
+builds (including Vercel) don't need the viewer assets committed to git.
+
+## Vercel deployment
+
+This repo can deploy to Vercel Hobby without schema changes. Use Git import +
+auto deploy, then configure the following production env vars:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key>
+APP_URL=https://<your-project>.vercel.app
+ADMIN_BOOTSTRAP_EMAIL=<optional>
+```
+
+Auth confirmation emails now use `APP_URL` explicitly, so production must set
+it to the final public origin. Preview deployments can share the same build
+pipeline, but email confirmation should keep targeting the production `APP_URL`.
+
+In Supabase Auth URL Configuration set:
+
+- `Site URL` = `https://<your-project>.vercel.app`
+- `Additional Redirect URLs` includes:
+  - `https://<your-project>.vercel.app/auth/callback`
+  - `http://localhost:3000/auth/callback`
 
 ## Admin
 

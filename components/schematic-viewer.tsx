@@ -126,6 +126,7 @@ type SchematicViewerProps = {
   schematicId?: string
   className?: string
   emptyLabel?: string
+  showQualityToggle?: boolean
 }
 
 type Quality = 'performance' | 'quality'
@@ -198,6 +199,7 @@ export default function SchematicViewer({
   schematicId = 'door',
   className,
   emptyLabel = 'Unable to load schematic.',
+  showQualityToggle = true,
 }: SchematicViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const rendererRef = useRef<SchematicRendererInstance | null>(null)
@@ -210,6 +212,13 @@ export default function SchematicViewer({
   useEffect(() => {
     installSrErrorSuppressor()
     queueMicrotask(() => setQuality(readStoredQuality()))
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.SchematicRenderer?.SchematicRenderer) {
+      setRendererReady(true)
+    }
   }, [])
 
   const toggleQuality = () => {
@@ -386,31 +395,33 @@ export default function SchematicViewer({
 
   return (
     <div className={className} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={toggleQuality}
-        aria-label="Toggle render quality"
-        style={{
-          position: 'absolute',
-          top: 8,
-          right: 8,
-          zIndex: 1,
-          fontSize: 10,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          padding: '4px 8px',
-          background: 'rgba(0,0,0,0.6)',
-          color: 'rgba(255,255,255,0.85)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          cursor: 'pointer',
-        }}
-      >
-        {quality === 'performance' ? 'Perf' : 'Quality'}
-      </button>
+      {showQualityToggle ? (
+        <button
+          type="button"
+          onClick={toggleQuality}
+          aria-label="Toggle render quality"
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 1,
+            fontSize: 10,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            padding: '4px 8px',
+            background: 'rgba(0,0,0,0.6)',
+            color: 'rgba(255,255,255,0.85)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            cursor: 'pointer',
+          }}
+        >
+          {quality === 'performance' ? 'Perf' : 'Quality'}
+        </button>
+      ) : null}
       {inView ? (
         <>
           <ThreeLoader onReady={() => setThreeReady(true)} onFail={setError} />
-          {threeReady ? (
+          {threeReady && !rendererReady ? (
             <Script
               src={RENDERER_SRC}
               strategy="afterInteractive"
