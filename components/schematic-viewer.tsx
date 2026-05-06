@@ -3,6 +3,8 @@
 import Script from 'next/script'
 import { useEffect, useRef, useState } from 'react'
 
+type LoadingStage = 'file_reading' | 'parsing' | 'mesh_building' | 'scene_setup'
+
 type SchematicRendererInstance = {
   dispose?: () => void
   cubane?: {
@@ -10,7 +12,18 @@ type SchematicRendererInstance = {
     getAssetLoader?: () => { buildTextureAtlas?: () => Promise<void> } | null
   }
   schematicManager?: {
-    loadSchematicFromURL: (url: string, id: string) => Promise<void>
+    loadSchematicFromURL: (
+      url: string,
+      id: string,
+      properties?: unknown,
+      options?: {
+        onProgress?: (progress: {
+          stage: LoadingStage
+          progress: number
+          message: string
+        }) => void
+      },
+    ) => Promise<void>
   }
   cameraManager?: {
     activeCamera?: {
@@ -121,19 +134,57 @@ function installSrErrorSuppressor() {
   }) as typeof console.groupCollapsed
 }
 
-function ensureResourcePack(): Promise<ArrayBuffer> {
+async function fetchArrayBufferWithProgress(
+  url: string,
+  onProgress?: (loaded: number, total: number | null) => void,
+): Promise<ArrayBuffer> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Resource pack HTTP ${res.status}`)
+
+  const totalHeader = res.headers.get('content-length')
+  const total = totalHeader ? Number.parseInt(totalHeader, 10) : null
+  if (!res.body) {
+    const buffer = await res.arrayBuffer()
+    onProgress?.(buffer.byteLength, total)
+    return buffer
+  }
+
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let loaded = 0
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    if (!value) continue
+    chunks.push(value)
+    loaded += value.byteLength
+    onProgress?.(loaded, total)
+  }
+
+  const merged = new Uint8Array(loaded)
+  let offset = 0
+  for (const chunk of chunks) {
+    merged.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return merged.buffer
+}
+
+function ensureResourcePack(
+  onProgress?: (loaded: number, total: number | null) => void,
+): Promise<ArrayBuffer> {
   if (!resourcePackPromise) {
-    resourcePackPromise = fetch(RESOURCE_PACK_URL)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Resource pack HTTP ${res.status}`)
-        return res.arrayBuffer()
-      })
+    resourcePackPromise = fetchArrayBufferWithProgress(RESOURCE_PACK_URL, onProgress)
       .catch((err) => {
         resourcePackPromise = null
         throw err
       })
   }
-  return resourcePackPromise
+  return resourcePackPromise.then((buffer) => {
+    onProgress?.(buffer.byteLength, buffer.byteLength)
+    return buffer
+  })
 }
 
 function ensureThreeLoaded(): Promise<void> {
@@ -239,6 +290,7 @@ export default function SchematicViewer({
   const [rendererReady, setRendererReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [quality, setQuality] = useState<Quality>('performance')
+  const [loadProgress, setLoadProgress] = useState<{ label: string; percent: number } | null>(null)
 
   useEffect(() => {
     installSrErrorSuppressor()
@@ -300,6 +352,13 @@ export default function SchematicViewer({
     let localInstance: SchematicRendererInstance | null = null
     let resizeObserver: ResizeObserver | null = null
     let markDisposed = () => {}
+    const updateProgress = (label: string, percent: number) => {
+      if (cancelled) return
+      setLoadProgress({
+        label,
+        percent: Math.max(0, Math.min(100, Math.round(percent))),
+      })
+    }
 
     const safeDispose = (instance: SchematicRendererInstance | null) => {
       if (!instance) return
@@ -314,6 +373,8 @@ export default function SchematicViewer({
     const run = async () => {
       try {
         if (cancelled) return
+        setError(null)
+        updateProgress('Starting viewer…', 4)
         // Construct the renderer empty first (mirrors the pattern in
         // old-references/door-catalog-viewer.html). Loading the schematic
         // or resource pack in the constructor is unreliable across versions
@@ -382,6 +443,7 @@ export default function SchematicViewer({
 
         await ready
         if (cancelled) return
+        updateProgress('Renderer ready', 18)
 
         // RenderManager.updateCanvasSize runs once during async init; if the
         // parent was still 0×0 at that instant (paint race, WASM hit cache,
@@ -411,24 +473,61 @@ export default function SchematicViewer({
 
         // Resource pack — required for the WASM texture atlas. Without it the
         // viewer throws "<illegal path>" while building its virtual FS.
-        const packBuffer = await ensureResourcePack()
+        updateProgress('Downloading textures…', 22)
+        const packPromise = ensureResourcePack((loaded, total) => {
+          const ratio = total && total > 0 ? loaded / total : 0
+          updateProgress('Downloading textures…', 22 + ratio * 28)
+        })
+        const resolvedPackBuffer = await packPromise
         if (cancelled) return
-        const packFile = new File([packBuffer.slice(0)], 'pack.zip', {
+        const resolvedPackFile = new File([resolvedPackBuffer.slice(0)], 'pack.zip', {
           type: 'application/zip',
         })
-        await instance.cubane?.loadResourcePack(packFile)
+        updateProgress('Loading resource pack…', 54)
+        await instance.cubane?.loadResourcePack(resolvedPackFile)
         const loader = instance.cubane?.getAssetLoader?.()
         if (loader && typeof loader.buildTextureAtlas === 'function') {
+          updateProgress('Building texture atlas…', 64)
           await loader.buildTextureAtlas()
         }
         if (cancelled) return
+        updateProgress('Preparing schematic…', 72)
 
         // Finally, fetch and load the actual schematic.
-        await instance.schematicManager?.loadSchematicFromURL(schematicUrl, schematicId)
+        await instance.schematicManager?.loadSchematicFromURL(
+          schematicUrl,
+          schematicId,
+          undefined,
+          {
+            onProgress: (progress) => {
+              const stageOffsets: Record<LoadingStage, number> = {
+                file_reading: 72,
+                parsing: 80,
+                mesh_building: 88,
+                scene_setup: 96,
+              }
+              const stageSpans: Record<LoadingStage, number> = {
+                file_reading: 8,
+                parsing: 8,
+                mesh_building: 8,
+                scene_setup: 4,
+              }
+              updateProgress(
+                progress.message,
+                stageOffsets[progress.stage] + (progress.progress / 100) * stageSpans[progress.stage],
+              )
+            },
+          },
+        )
         if (cancelled) return
         instance.cameraManager?.focusOnSchematics?.()
+        updateProgress('Ready', 100)
+        window.setTimeout(() => {
+          if (!cancelled) setLoadProgress(null)
+        }, 180)
       } catch (err) {
         if (cancelled) return
+        setLoadProgress(null)
         setError(err instanceof Error ? err.message : String(err))
       }
     }
@@ -438,6 +537,7 @@ export default function SchematicViewer({
     return () => {
       cancelled = true
       markDisposed()
+      setLoadProgress(null)
       resizeObserver?.disconnect()
       resizeObserver = null
       safeDispose(localInstance)
@@ -484,6 +584,59 @@ export default function SchematicViewer({
         </>
       ) : null}
       <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+      {loadProgress && !error ? (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'flex-end',
+            pointerEvents: 'none',
+            background: 'linear-gradient(to top, rgba(0,0,0,0.35), rgba(0,0,0,0.04) 42%, transparent 70%)',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              padding: '12px 12px 10px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 12,
+                marginBottom: 6,
+                color: 'rgba(255,255,255,0.82)',
+                fontSize: 10,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+              }}
+            >
+              <span>{loadProgress.label}</span>
+              <span>{loadProgress.percent}%</span>
+            </div>
+            <div
+              style={{
+                height: 4,
+                width: '100%',
+                background: 'rgba(255,255,255,0.18)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${loadProgress.percent}%`,
+                  background: 'linear-gradient(90deg, rgba(177,54,34,0.88), rgba(255,126,74,0.96))',
+                  transition: 'width 180ms ease',
+                  boxShadow: '0 0 12px rgba(177,54,34,0.35)',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
       {error ? (
         <p role="alert" style={{ padding: 12, fontSize: 13 }}>
           {emptyLabel} <span style={{ opacity: 0.7 }}>({error})</span>
