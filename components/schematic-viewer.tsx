@@ -13,6 +13,9 @@ type SchematicRendererInstance = {
     loadSchematicFromURL: (url: string, id: string) => Promise<void>
   }
   cameraManager?: {
+    activeCamera?: {
+      camera?: unknown
+    }
     focusOnSchematics?: () => void
     switchCameraPreset?: (preset: string) => void
   }
@@ -268,6 +271,7 @@ export default function SchematicViewer({
     let cancelled = false
     let localInstance: SchematicRendererInstance | null = null
     let resizeObserver: ResizeObserver | null = null
+    let markDisposed = () => {}
 
     const safeDispose = (instance: SchematicRendererInstance | null) => {
       if (!instance) return
@@ -321,6 +325,25 @@ export default function SchematicViewer({
         }
         localInstance = instance
         rendererRef.current = instance
+
+        const renderManager = instance.renderManager
+        if (renderManager?.updateCanvasSize) {
+          const originalUpdateCanvasSize = renderManager.updateCanvasSize.bind(renderManager)
+          let disposed = false
+          markDisposed = () => {
+            disposed = true
+          }
+          renderManager.updateCanvasSize = () => {
+            if (cancelled || disposed) return
+            const parent = canvas.parentElement
+            const camera = instance.cameraManager?.activeCamera?.camera
+            if (!parent || !camera) return
+            const width = parent.clientWidth
+            const height = parent.clientHeight
+            if (width <= 0 || height <= 0) return
+            originalUpdateCanvasSize()
+          }
+        }
 
         const cap = DPR_BY_QUALITY[quality]
         const ratio = Math.min(
@@ -386,6 +409,7 @@ export default function SchematicViewer({
 
     return () => {
       cancelled = true
+      markDisposed()
       resizeObserver?.disconnect()
       resizeObserver = null
       safeDispose(localInstance)
