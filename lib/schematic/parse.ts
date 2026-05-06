@@ -1,5 +1,6 @@
 import { read } from 'nbtify'
 import type { DoorFileFormat } from '@/lib/types/door'
+import { normalizeMinecraftVersion } from '@/lib/minecraft-version'
 
 export type ParsedSchematicMetadata = {
   block_count?: number
@@ -147,7 +148,7 @@ async function parseSpongeSchematic(data: ArrayBuffer | Uint8Array | Blob): Prom
         asNumber(root.minecraft_version)
       return versionNumber !== null ? String(Math.trunc(versionNumber)) : null
     })()
-  const minecraft_version = versionString ?? undefined
+  const minecraft_version = normalizeMinecraftVersion(versionString ?? undefined) ?? undefined
 
   return {
     block_count,
@@ -193,7 +194,9 @@ async function parseLitematic(data: ArrayBuffer | Uint8Array | Blob): Promise<Pa
   }
 
   const dataVersion = asNumber(root.MinecraftDataVersion)
-  const minecraft_version = dataVersion !== null ? String(Math.trunc(dataVersion)) : undefined
+  const minecraft_version = dataVersion !== null
+    ? (normalizeMinecraftVersion(String(Math.trunc(dataVersion))) ?? undefined)
+    : undefined
 
   const out: ParsedSchematicMetadata = {}
   if (totalBlocks !== null && totalBlocks >= 0) out.block_count = Math.trunc(totalBlocks)

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { compareDoorSizes } from '@/lib/door-size'
 import type { Door } from '@/lib/types/door'
 
 export type AdminDoorRow = Door & {
@@ -260,11 +261,7 @@ export async function getSizeDistribution(): Promise<SizeBucket[]> {
   }
   return Array.from(map.entries())
     .map(([size, count]) => ({ size, count }))
-    .sort((a, b) => {
-      const [aw, ah] = a.size.split('x').map(Number)
-      const [bw, bh] = b.size.split('x').map(Number)
-      return aw - bw || ah - bh
-    })
+    .sort((a, b) => compareDoorSizes(a.size, b.size))
 }
 
 export type UploaderStats = {

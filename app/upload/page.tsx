@@ -49,7 +49,9 @@ export default async function UploadPage() {
               <Label htmlFor="door_height">Height</Label>
               <Input id="door_height" name="door_height" type="number" min={1} required />
             </div>
-            <p className="text-muted-foreground pb-2 text-xs">Two numbers form the catalog size tag (e.g. 3 × 3).</p>
+            <p className="text-muted-foreground pb-2 text-xs">
+              Any positive width × height is allowed. The catalog's size filters are generated from submitted sizes automatically.
+            </p>
           </div>
         </Section>
 

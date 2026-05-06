@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import SchematicViewer from '@/components/schematic-viewer-lazy'
 import { getDoor } from '@/lib/doors/queries'
+import { normalizeMinecraftVersion } from '@/lib/minecraft-version'
 import type { DoorFileFormat, DoorWithFiles } from '@/lib/types/door'
 
 type Params = Promise<{ id: string }>
@@ -66,6 +67,7 @@ export default async function DoorDetailPage({ params }: { params: Params }) {
 
   const schematicUrl = preferredFile?.url ?? null
   const embedSrc = youtubeEmbed(door.video_url)
+  const minecraftVersion = normalizeMinecraftVersion(door.minecraft_version)
 
   return (
     <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 p-6">
@@ -93,8 +95,8 @@ export default async function DoorDetailPage({ params }: { params: Params }) {
         <h1 className="text-4xl font-semibold tracking-tight leading-tight">{door.title}</h1>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-muted-foreground text-sm">by {door.author}</span>
-          {door.minecraft_version ? (
-            <Badge variant="outline" className="text-xs">{door.minecraft_version}</Badge>
+          {minecraftVersion ? (
+            <Badge variant="outline" className="text-xs">{minecraftVersion}</Badge>
           ) : null}
           {door.tags.map((t) => (
             <Badge key={t} variant="outline" className="text-xs font-normal">{t}</Badge>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import SchematicViewer from '@/components/schematic-viewer-lazy'
 import { getPreferredDoorFile } from '@/lib/doors/files'
+import { normalizeMinecraftVersion } from '@/lib/minecraft-version'
 import { listAvailableSizes, listDoors, listFeaturedForPublic } from '@/lib/doors/queries'
 import { createClient } from '@/lib/supabase/server'
 import { signOutAction } from '@/app/auth/actions'
@@ -217,6 +218,7 @@ type Door = Awaited<ReturnType<typeof listDoors>>[number]
 
 function DoorCard({ door }: { door: Door }) {
   const preferredFile = getPreferredDoorFile(door)
+  const minecraftVersion = normalizeMinecraftVersion(door.minecraft_version)
 
   return (
     <article className="panel-surface group relative flex flex-col overflow-hidden border border-border transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/45 hover:shadow-[0_24px_50px_-34px_rgba(67,34,21,0.55)]">
@@ -262,8 +264,8 @@ function DoorCard({ door }: { door: Door }) {
           <Badge variant="secondary" className="border-primary/30 bg-primary/10 text-primary text-xs">
             {door.door_size}
           </Badge>
-          {door.minecraft_version ? (
-            <Badge variant="outline" className="text-xs">{door.minecraft_version}</Badge>
+          {minecraftVersion ? (
+            <Badge variant="outline" className="text-xs">{minecraftVersion}</Badge>
           ) : null}
         </div>
 
