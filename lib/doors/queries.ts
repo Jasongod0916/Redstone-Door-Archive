@@ -18,6 +18,7 @@ export async function listDoors(opts: DoorsListOptions = {}): Promise<DoorCardRo
   let q = supabase
     .from('doors')
     .select('*, door_files(id, format, storage_path, file_name)')
+    .is('deleted_at', null)
 
   if (opts.size) q = q.eq('door_size', opts.size)
 
@@ -53,14 +54,27 @@ export async function getDoor(id: string): Promise<DoorWithFiles | null> {
     .from('doors')
     .select('*, door_files(*)')
     .eq('id', id)
+    .is('deleted_at', null)
     .maybeSingle()
   if (error) throw error
   return (data as DoorWithFiles | null) ?? null
 }
 
+export async function listDoorsForOwner(ownerId: string): Promise<DoorCardRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('doors')
+    .select('*, door_files(id, format, storage_path, file_name)')
+    .eq('owner_id', ownerId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as DoorCardRow[]
+}
+
 export async function listAvailableSizes(): Promise<Array<{ size: string; count: number }>> {
   const supabase = await createClient()
-  const { data, error } = await supabase.from('doors').select('door_size')
+  const { data, error } = await supabase.from('doors').select('door_size').is('deleted_at', null)
   if (error) throw error
   const map = new Map<string, number>()
   for (const row of data ?? []) {
