@@ -50,7 +50,7 @@ export default async function UploadPage() {
               <Input id="door_height" name="door_height" type="number" min={1} required />
             </div>
             <p className="text-muted-foreground pb-2 text-xs">
-              Any positive width × height is allowed. The catalog's size filters are generated from submitted sizes automatically.
+              Any positive width × height is allowed. The catalog&apos;s size filters are generated from submitted sizes automatically.
             </p>
           </div>
         </Section>

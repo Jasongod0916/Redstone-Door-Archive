@@ -6,7 +6,6 @@ export type AdminUser = User
 
 async function tryBootstrap(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  _user: User,
 ): Promise<boolean> {
   const bootstrapEmail = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim()
   if (!bootstrapEmail) return false
@@ -56,6 +55,6 @@ export async function requireAdmin(nextPath?: string): Promise<AdminUser> {
     redirect(`/auth/login?next=${encodeURIComponent(next)}`)
   }
   if (await isMember(supabase, user.id)) return user
-  if (await tryBootstrap(supabase, user)) return user
+  if (await tryBootstrap(supabase)) return user
   notFound()
 }

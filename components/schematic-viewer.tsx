@@ -300,7 +300,7 @@ export default function SchematicViewer({
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.SchematicRenderer?.SchematicRenderer) {
-      setRendererReady(true)
+      queueMicrotask(() => setRendererReady(true))
     }
   }, [])
 

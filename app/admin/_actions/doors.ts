@@ -10,14 +10,21 @@ export type ActionResult = { ok: true } | { ok: false, error: string }
 // NOTE: `doors` table has NO door_width / door_height columns — only a single
 // `door_size` text column (e.g. "3x3"). Upload combines two inputs into that
 // string before insert; admin edit keeps the single-field form.
-const EDITABLE_FIELDS = [
-  'title', 'author', 'description', 'tags', 'minecraft_version',
-  'door_size',
-  'block_count', 'open_ticks', 'close_ticks', 'total_ticks',
-  'bounds_width', 'bounds_height', 'bounds_depth',
-  'video_url',
-] as const
-type EditableField = typeof EDITABLE_FIELDS[number]
+type EditableField =
+  | 'title'
+  | 'author'
+  | 'description'
+  | 'tags'
+  | 'minecraft_version'
+  | 'door_size'
+  | 'block_count'
+  | 'open_ticks'
+  | 'close_ticks'
+  | 'total_ticks'
+  | 'bounds_width'
+  | 'bounds_height'
+  | 'bounds_depth'
+  | 'video_url'
 
 export type DoorMetaUpdate = Partial<Record<EditableField, string | number | string[] | null>>
 

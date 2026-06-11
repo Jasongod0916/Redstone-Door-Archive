@@ -3,6 +3,7 @@ import { DoorCard } from '@/components/door-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { listAvailableSizes, listDoors, listFeaturedForPublic } from '@/lib/doors/queries'
+import type { DoorCardRow } from '@/lib/doors/queries'
 import { createClient } from '@/lib/supabase/server'
 import { signOutAction } from '@/app/auth/actions'
 
@@ -25,13 +26,30 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
     | 'ticks'
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const userResult = await supabase.auth.getUser().catch((error) => {
+    logCatalogError('Unable to read auth session', error)
+    return null
+  })
+  const user = userResult?.data.user ?? null
 
   const hasFilter = !!sizeParam || !!search || sort !== 'recent'
-  const featured = hasFilter ? [] : await listFeaturedForPublic()
+  let catalogError = userResult == null
+  let featured: DoorCardRow[] = []
+  let doors: DoorCardRow[] = []
+  let sizes: Array<{ size: string; count: number }> = []
+
+  if (!hasFilter) {
+    const featuredResult = await listFeaturedForPublic().catch((error) => {
+      logCatalogError('Unable to load featured doors', error)
+      catalogError = true
+      return []
+    })
+    featured = featuredResult
+  }
+
   const excludeIds = featured.map((d) => d.id)
 
-  const [doors, sizes] = await Promise.all([
+  const [doorsResult, sizesResult] = await Promise.allSettled([
     listDoors({
       size: sizeParam,
       sort,
@@ -40,6 +58,20 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
     }),
     listAvailableSizes(),
   ])
+
+  if (doorsResult.status === 'fulfilled') {
+    doors = doorsResult.value
+  } else {
+    logCatalogError('Unable to load doors', doorsResult.reason)
+    catalogError = true
+  }
+
+  if (sizesResult.status === 'fulfilled') {
+    sizes = sizesResult.value
+  } else {
+    logCatalogError('Unable to load available sizes', sizesResult.reason)
+    catalogError = true
+  }
 
   return (
     <main className="relative mx-auto flex w-full max-w-[1480px] flex-col gap-8 overflow-hidden px-4 py-6 sm:px-6">
@@ -114,6 +146,12 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           >
             Sign in →
           </Link>
+        </div>
+      ) : null}
+
+      {catalogError ? (
+        <div className="panel-surface border border-destructive/35 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+          The archive is temporarily unavailable. You can still browse this page, but catalog results may be incomplete.
         </div>
       ) : null}
 
@@ -227,4 +265,8 @@ function SizePill({ href, active, label }: { href: string; active: boolean; labe
       {label}
     </Link>
   )
+}
+
+function logCatalogError(message: string, error: unknown) {
+  console.error(`[catalog] ${message}`, error)
 }
